@@ -7,6 +7,7 @@ import Tkinter, tkMessageBox
 from PageOne import *
 from PageTwo import *
 
+
 # Define the tab content as classes:
 class TabOne(wx.Panel):
     def __init__(self, parent, pageOne):
@@ -32,6 +33,7 @@ class TabOne(wx.Panel):
         else:
             plt = self.__pageOne.getPriceForProduct(self.__product.GetValue(), self.__chain.GetValue(), self.__brunch.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
             plt.show()
+
 
     def getBranches(self, event):
         self.__brunch.Set(self.__pageOne.getAllBrunchNamesInchain(self.__chain.GetValue()))
@@ -95,6 +97,7 @@ class MainFrame(wx.Frame):
         sizer.Add(nb, 1, wx.EXPAND)
         panel.SetSizer(sizer)
         sizer.Layout()
+
         root = Tkinter.Tk()
         root.withdraw()
 
