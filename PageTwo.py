@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from datetime import datetime
-from datetime import timedelta
 from warehouseCommunication import *
 import pandas as pd
 import wx
-import numpy
+import collections
 
 class buildPageTwo:
     def __init__(self):
@@ -33,6 +31,13 @@ class buildPageTwo:
     def getAllChains(self):
         return list(self.__branchesInChains.keys())
 
+    def __getProductsPrices(self, chain, branch, startDate, endDate):
+        parameters = [chain, branch, str(startDate), str(endDate)]
+        query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
+        df = self.__whCommunication.executeQuery(query, parameters)
+        return df
+
+    # assistance function that convert from class 'wx._core.DateTime' to type 'datetime.date'
     def __wxdate2pydate(self, date):
         import datetime
         assert isinstance(date, wx.DateTime)
@@ -43,45 +48,51 @@ class buildPageTwo:
             return None
 
 
-    def __buildInputs (self, chain, branch, startDate, endDate):
-        parameters = [chain, branch,str(startDate), str(endDate)]
-        query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
-        df = self.__whCommunication.executeQuery(query, parameters)
-        newRowsToAdd = pd.DataFrame()
-        branch_PricesForProducts = {}
-        dateCounter = startDate
-        # convert the columns- datekey from timestamp to type 'datetime.date'
-        df['datekey'] = df['datekey'].apply(lambda x: x.date())
-        countProducts = df['barcode'].value_counts() #count how many different barcodes we have (this way we discovered all products need to filled there dates)
-        diff = endDate - startDate
-        numOfDays = diff.days + 1
+    # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
+    def __buildInputsForPearson (self, chain, branch, startDate, endDate):
+        df = self.__getProductsPrices(chain, branch, startDate, endDate)
+        if (df.empty):
+            return None
+
+        df['datekey'] = df['datekey'].apply(lambda x: x.date()) # convert the columns- datekey from timestamp to type 'datetime.date'
+        countProducts = df['barcode'].value_counts()  #count how many different barcodes we have (this way we discovered all products need to filled there dates)
+        numOfDays = (endDate - startDate).days + 1
         needToFilledProducts = countProducts[countProducts < numOfDays]
-        df2 = df[df['barcode'].isin(list(needToFilledProducts.keys()))]
-        datelist = pd.date_range(startDate, periods=numOfDays).tolist()
+        df_ProductsWithGaps = df[df['barcode'].isin(list(needToFilledProducts.keys()))] # df_ProductsWithGaps contain all the rows of products from df that have missing rows (dates)
+        datesList = pd.date_range(startDate, periods=numOfDays).tolist()
+        newRowsToAdd = pd.DataFrame()#dataframe that contain all the missing products's dates and their costs
 
-        #find all the dates that missing for each incomplete product (barcode)
-        for barcode in needToFilledProducts.keys():
+        #find all the dates that missing for each incomplete product (barcode) and complete its cost from the nearest available date
+        for barcode in needToFilledProducts.keys():# run on all products that have missing dates
             last_cost = -1.0
-            for dateToCheck in datelist:
-                dateToCheck = dateToCheck.date()
-                if not (((df2['datekey'] == dateToCheck) & (df2['barcode'] == barcode)).any()):
-                    if (last_cost == -1.0): #on the elsw insert the cost..
-                        # last_cost = df2[df2.barcode == barcode].head(1)
-                        last_cost_index = df2.barcode[df2.barcode == barcode].index.tolist()[0]
-                        last_cost = df2.get_value(last_cost_index, 'cost', takeable=False) #the earliest cost of this barcode
-                    new_row = pd.Series([barcode, dateToCheck, last_cost], index=['barcode', 'datekey', 'cost'])
-                    newRowsToAdd = newRowsToAdd.append(new_row, ignore_index=True)
+            for dateToCheck in datesList: #run on all dates (from start to end date)
+                if (needToFilledProducts[barcode] < numOfDays):
+                    dateToCheck = dateToCheck.date()
+                    if not (((df_ProductsWithGaps['datekey'] == dateToCheck) & (df_ProductsWithGaps['barcode'] == barcode)).any()):
+                        if (last_cost == -1.0): #we dont have the cost of the day before
+                            last_cost_index = df_ProductsWithGaps.barcode[df_ProductsWithGaps.barcode == barcode].index.tolist()[0]
+                            last_cost = df_ProductsWithGaps.get_value(last_cost_index, 'cost', takeable=False) #the earliest cost of this barcode(of the next day)
+                        new_row = pd.Series([barcode, dateToCheck, last_cost], index=['barcode', 'datekey', 'cost'])
+                        newRowsToAdd = newRowsToAdd.append(new_row, ignore_index=True)
+                        needToFilledProducts[barcode]+=1
 
+                    else: #this date dont missing- remember the last known cost of this product
+                        mask = ((df_ProductsWithGaps['datekey'] == dateToCheck) & (df_ProductsWithGaps['barcode'] == barcode))
+                        last_cost_index = df_ProductsWithGaps.loc[mask].index.tolist()[0]
+                        last_cost = df_ProductsWithGaps.get_value(last_cost_index, 'cost', takeable=False)
                 else:
-                    mask = ((df2['datekey'] == dateToCheck) & (df2['barcode'] == barcode))#the last known cost of this barcode
-                    last_cost_index = df2.loc[mask].index.tolist()[0]
-                    last_cost = df2.get_value(last_cost_index, 'cost', takeable=False)
+                    break #we complete all the dates for current product- go to the next product
 
-
-
+        branch_PricesForProducts = {}
         df = df.append(newRowsToAdd, ignore_index=True)
-        # df = df.sort_values(['barcode', 'datekey'], ascending=[False, True], inplace=True) #sort dont work! check and make dictonery from df (key- barcodes, value- arrayes of prices per each day)
-        print (df)
+        df = df.sort(['barcode', 'datekey'], ascending=[0, 1]) #sort the complete df (all the dates and their costs for all products is there)
+
+        # create dictionary from df (key- barcodes, value- arrayes of prices per each day)
+        for barcode in countProducts.keys():
+            cost_array = df.loc[df['barcode'] == barcode, ['cost']].values
+            branch_PricesForProducts[barcode] = cost_array
+        branch_PricesForProducts = collections.OrderedDict(sorted(branch_PricesForProducts.items()))
+        return branch_PricesForProducts
 
     #run kendel/pearson here
     def findPriceCoordinate(self, chain1, branch1, chain2, branch2, startDate, endDate):
@@ -89,10 +100,10 @@ class buildPageTwo:
         startDate = self.__wxdate2pydate(startDate)
         endDate = self.__wxdate2pydate(endDate)
         #function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
-        branch1_PricesForProducts = self.__buildInputs (chain1, branch1, startDate, endDate)
-        branch2_PricesForProducts = self.__buildInputs (chain2, branch2, startDate, endDate)
+        branch1_PricesForProducts = self.__buildInputsForPearson (chain1, branch1, startDate, endDate)
+        branch2_PricesForProducts = self.__buildInputsForPearson (chain2, branch2, startDate, endDate)
 
 
-        # if (len(branch1_PricesForProducts) > 0 and len(branch2_PricesForProducts) > 0):
-        #     #pearson
-        #     return
+        if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
+             #pearson
+            return
