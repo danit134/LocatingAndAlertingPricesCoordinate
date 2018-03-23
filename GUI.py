@@ -1,107 +1,223 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import Tkinter
+import os
+import tkMessageBox
+
 import wx
 import wx.adv
-import Tkinter, tkMessageBox
-from PageOne import *
-from PageTwo import *
-from PageThree import *
-
+from AppPages.PageOne import *
+from AppPages.PageTwo import *
+from AppPages.PageThree import *
+from AppPages.mutualMethods import *
 
 # Define the tab content as classes:
 
 class TabOne(wx.Panel):
-    def __init__(self, parent, pageOne):
+    def __init__(self, parent, pageOne, mutualMet):
         wx.Panel.__init__(self, parent)
         self.__pageOne = pageOne
-        wx.StaticText(self, label='Chain 1', pos=(15, 30))
-        self.__chain1 = wx.ComboBox(self, choices=self.__pageOne.getAllChains(), pos=(65, 30)) #show all the chains
+        self.__mutualMet = mutualMet
+        self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
+        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+        self.correlateBetweenTwoBranches.SetValue(True)
+        self.correlateInCity.SetValue(False)
+        self.Bind(wx.EVT_CHECKBOX, self.onChecked)
+        self.drawCorrelateBetweenTwoBranches()
+
+    def drawCorrelateBetweenTwoBranches(self):
+        wx.StaticText(self, label='City', pos=(15, 40))
+        self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 40))  # show all the chains
+        self.__city.Bind(wx.EVT_COMBOBOX, self.getchainsInCity)
+        wx.StaticText(self, label='Chain 1', pos=(15, 80))
+        self.__chain1 = wx.ComboBox(self, choices=[], pos=(65, 80), size=(150, -1))  # show all the chains
         self.__chain1.Bind(wx.EVT_COMBOBOX, self.getBranches_1)
-        wx.StaticText(self, label='Brunch 1', pos=(230, 30))
-        self.__branch1 = wx.ComboBox(self, choices=[], pos=(285, 30), size=(170, -1))
-        wx.StaticText(self, label='Chain 2', pos=(15, 85))
-        self.__chain2 = wx.ComboBox(self, choices=self.__pageOne.getAllChains(), pos=(65, 85)) #show all the chains
+        # self.__chain1.Bind(wx.EVT_TEXT, self.ComboChange)
+        wx.StaticText(self, label='Brunch 1', pos=(230, 80))
+        self.__branch1 = wx.ComboBox(self, choices=[], pos=(285, 80), size=(150, -1))
+        wx.StaticText(self, label='Chain 2', pos=(15, 110))
+        self.__chain2 = wx.ComboBox(self, choices=[], pos=(65, 110), size=(150, -1))  # show all the chains
         self.__chain2.Bind(wx.EVT_COMBOBOX, self.getBranches_2)
-        wx.StaticText(self, label='Brunch 2', pos=(230, 85))
-        self.__branch2 = wx.ComboBox(self, choices=[], pos=(285, 85), size=(170, -1))
-        wx.StaticText(self, label='Start date', pos=(15, 135))
-        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 135))
-        wx.StaticText(self, label='End date', pos=(175, 135))
-        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 135))
-        btn = wx.Button(self, label='Find Price Coordinate!', pos=(170, 200))
-        btn.Bind(wx.EVT_BUTTON, self.OnClick)
+        wx.StaticText(self, label='Brunch 2', pos=(230, 110))
+        self.__branch2 = wx.ComboBox(self, choices=[], pos=(285, 110), size=(150, -1))
+        wx.StaticText(self, label='Start date', pos=(15, 160))
+        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
+        wx.StaticText(self, label='End date', pos=(175, 160))
+        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
+        wx.StaticText(self, label='Results File Path', pos=(55, 215))
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(150, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
+        btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
+        btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateBetweenTwoBranches)
+
+    def getchainsInCity(self, event):
+        self.__chain1.Set(self.__mutualMet.getAllChainsInCity(self.__city.GetValue()))
+        self.__chain2.Set(self.__mutualMet.getAllChainsInCity(self.__city.GetValue()))
+        self.__branch1.Set([])
+        self.__branch2.Set([])
 
     def getBranches_1(self, event):
-        self.__branch1.Set(self.__pageOne.getAllBrunchNamesInchain(self.__chain1.GetValue()))
+        self.__branch1.Set(self.__mutualMet.getAllBrunchNamesInchain(self.__city.GetValue(), self.__chain1.GetValue()))
 
     def getBranches_2(self, event):
-        self.__branch2.Set(self.__pageOne.getAllBrunchNamesInchain(self.__chain2.GetValue()))
+        self.__branch2.Set(self.__mutualMet.getAllBrunchNamesInchain(self.__city.GetValue(), self.__chain2.GetValue()))
 
-    def OnClick(self, event):
-        if (self.__chain1.GetValue() == self.__chain2.GetValue()):
+    def OnClick_CorrelateBetweenTwoBranches(self, event):
+        if not (self.__mutualMet.cityExist(self.__city.GetValue())):
+            tkMessageBox.showinfo("Error", "City not exist!")
+        elif (self.__chain1.GetValue() == self.__chain2.GetValue()):
             tkMessageBox.showinfo("Error", "Please insert different Chains!")
-        elif not(self.__pageOne.chainExist(self.__chain1.GetValue()) and self.__pageOne.chainExist(self.__chain2.GetValue())):
-            tkMessageBox.showinfo("Error", "chain not exist!")
-        elif not (self.__pageOne.branchExist(self.__chain1.GetValue(), self.__branch1.GetValue()) and (self.__pageOne.branchExist(self.__chain2.GetValue(), self.__branch2.GetValue()))):
-                tkMessageBox.showinfo("Error", "branch not exist!")
+        elif not(self.__mutualMet.chainExist(self.__city.GetValue(), self.__chain1.GetValue()) and self.__mutualMet.chainExist(self.__city.GetValue(), self.__chain2.GetValue())):
+            tkMessageBox.showinfo("Error", "Chain not exist!")
+        elif not (self.__mutualMet.branchExist(self.__city.GetValue(),self.__chain1.GetValue(), self.__branch1.GetValue()) and (self.__mutualMet.branchExist(self.__city.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue()))):
+                tkMessageBox.showinfo("Error", "Branch not exist!")
         elif (self.__startDate.GetValue() > self.__endDate.GetValue()):
-            tkMessageBox.showinfo("Error", "please insert start date early then end date!")
+            tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
         elif (self.__startDate.GetValue() == self.__endDate.GetValue()):
-            tkMessageBox.showinfo("Error", "can't calculate price coordinate when start data equal end date (need at least 2 days)!")
+            tkMessageBox.showinfo("Error", "Can't calculate price coordinate when start data equal end date (need at least 2 days)!")
+        elif not (os.path.isdir(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
+        elif not (os.path.exists(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
         else:
-            self.__pageOne.findPriceCoordinate(self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
+            self.__pageOne.findPriceCoordinate(self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
+            tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results file")
+
+    def drawCorrelateInCity(self):
+        wx.StaticText(self, label='City', pos=(15, 40))
+        self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 40))  # show all the chains
+        wx.StaticText(self, label='Start date', pos=(15, 90))
+        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 90))
+        wx.StaticText(self, label='End date', pos=(175, 90))
+        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 90))
+        wx.StaticText(self, label='Results File Path', pos=(55, 215))
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(150, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
+        btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
+        btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateInCity)
+
+    def OnClick_CorrelateInCity(self, event):
+        if not (self.__mutualMet.cityExist(self.__city.GetValue())):
+            tkMessageBox.showinfo("Error", "City not exist!")
+        elif (self.__startDate.GetValue() > self.__endDate.GetValue()):
+            tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
+        elif (self.__startDate.GetValue() == self.__endDate.GetValue()):
+            tkMessageBox.showinfo("Error", "Can't calculate price coordinate when start data equal end date (need at least 2 days)!")
+        elif not (os.path.isdir(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
+        elif not (os.path.exists(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
+        else:
+            self.__pageOne.findPriceCoordinate(self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
+            tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results files")
+
+    def onChecked(self, event):
+        cb = event.GetEventObject()
+        if (cb.GetLabel() == 'Find correlate between all branches in specific city' and cb.GetValue() == True):
+            self.DestroyChildren()
+            self.drawCorrelateInCity()
+            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+            self.correlateBetweenTwoBranches.SetValue(False)
+            self.correlateInCity.SetValue(True)
+            self.Bind(wx.EVT_CHECKBOX, self.onChecked)
+        else:
+            self.DestroyChildren()
+            self.drawCorrelateBetweenTwoBranches()
+            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+            self.correlateInCity.SetValue(False)
+            self.correlateBetweenTwoBranches.SetValue(True)
+            self.Bind(wx.EVT_CHECKBOX, self.onChecked)
+
 
 class TabTwo(wx.Panel):
-    def __init__(self, parent, pageTwo):
+    def __init__(self, parent, pageTwo, mutualMet):
         wx.Panel.__init__(self, parent)
         self.__pageTwo = pageTwo
-        wx.StaticText(self, label='Product', pos=(15, 30))
-        self.__product = wx.ComboBox(self, choices=self.__pageTwo.getAllProducts(), pos=(65, 30))
-        wx.StaticText(self, label='Chain', pos=(15, 85))
-        self.__chain = wx.ComboBox(self, choices=self.__pageTwo.getAllChains(), pos=(65, 85)) #show all the chains
-        self.__chain.Bind(wx.EVT_COMBOBOX, self.getBranches)
-        wx.StaticText(self, label='Brunch', pos=(230, 85))
-        self.__branch = wx.ComboBox(self, choices=[], pos=(275, 85), size=(170, -1))
-        wx.StaticText(self, label='Start date', pos=(15, 135))
-        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 135))
-        wx.StaticText(self, label='End date', pos=(175, 135))
-        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 135))
-        btn = wx.Button(self, label='Ok', pos=(200, 200), size=(60, -1))
+        self.__mutualMet = mutualMet
+        wx.StaticText(self, label='Product', pos=(15, 10))
+        self.__product = wx.ComboBox(self, choices=self.__mutualMet.getAllProductsNames(), pos=(65, 10))
+        wx.StaticText(self, label='City', pos=(15, 40))
+        self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 40))  # show all the chains
+        self.__city.Bind(wx.EVT_COMBOBOX, self.getchainsInCity)
+        wx.StaticText(self, label='Chain 1', pos=(15, 80))
+        self.__chain1 = wx.ComboBox(self, choices=[], pos=(65, 80), size=(150, -1))  # show all the chains
+        self.__chain1.Bind(wx.EVT_COMBOBOX, self.getBranches_1)
+        wx.StaticText(self, label='Brunch 1', pos=(230, 80))
+        self.__branch1 = wx.ComboBox(self, choices=[], pos=(285, 80), size=(150, -1))
+        wx.StaticText(self, label='Chain 2', pos=(15, 110))
+        self.__chain2 = wx.ComboBox(self, choices=[], pos=(65, 110), size=(150, -1))  # show all the chains
+        self.__chain2.Bind(wx.EVT_COMBOBOX, self.getBranches_2)
+        wx.StaticText(self, label='Brunch 2', pos=(230, 110))
+        self.__branch2 = wx.ComboBox(self, choices=[], pos=(285, 110), size=(150, -1))
+        wx.StaticText(self, label='Start date', pos=(15, 160))
+        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
+        wx.StaticText(self, label='End date', pos=(175, 160))
+        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
+        btn = wx.Button(self, label='Show Prices On Graph!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick)
 
-    def OnClick (self, event):
-        if (self.__startDate.GetValue() > self.__endDate.GetValue()):
-            tkMessageBox.showinfo("Error", "please insert start date early then end date!")
-        else:
-            plt = self.__pageTwo.getPriceForProduct(self.__product.GetValue(), self.__chain.GetValue(), self.__branch.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
-            plt.show()
+    def getchainsInCity(self, event):
+        self.__chain1.Set(self.__mutualMet.getAllChainsInCity(self.__city.GetValue()))
+        self.__chain2.Set(self.__mutualMet.getAllChainsInCity(self.__city.GetValue()))
+        self.__branch1.Set([])
+        self.__branch2.Set([])
 
+    def getBranches_1(self, event):
+        self.__branch1.Set(self.__mutualMet.getAllBrunchNamesInchain(self.__city.GetValue(), self.__chain1.GetValue()))
+
+    def getBranches_2(self, event):
+        self.__branch2.Set(self.__mutualMet.getAllBrunchNamesInchain(self.__city.GetValue(), self.__chain2.GetValue()))
+
+    def OnClick (self, event):
+        if not (self.__mutualMet.productExist(self.__product.GetValue())):
+            tkMessageBox.showinfo("Error", "Product not exist!")
+        elif not (self.__mutualMet.cityExist(self.__city.GetValue())):
+            tkMessageBox.showinfo("Error", "City not exist!")
+        elif (self.__chain1.GetValue() == self.__chain2.GetValue()):
+            tkMessageBox.showinfo("Error", "Please insert different Chains!")
+        elif not(self.__mutualMet.chainExist(self.__city.GetValue(), self.__chain1.GetValue()) and self.__mutualMet.chainExist(self.__city.GetValue(), self.__chain2.GetValue())):
+            tkMessageBox.showinfo("Error", "Chain not exist!")
+        elif not (self.__mutualMet.branchExist(self.__city.GetValue(),self.__chain1.GetValue(), self.__branch1.GetValue()) and (self.__mutualMet.branchExist(self.__city.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue()))):
+                tkMessageBox.showinfo("Error", "Branch not exist!")
+        elif (self.__startDate.GetValue() > self.__endDate.GetValue()):
+            tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
+
+        else:
+            self.__barcode = self.__mutualMet.getBarcode(self.__product.GetValue())
+            plt = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
+            plt.show()
 
     def getBranches(self, event):
         self.__branch.Set(self.__pageTwo.getAllBrunchNamesInchain(self.__chain.GetValue()))
 
+
 class TabThree(wx.Panel):
-    def __init__(self, parent, pageThree):
+    def __init__(self, parent, pageThree, mutualMet):
         wx.Panel.__init__(self, parent)
         self.__pageTwo = pageThree
+        self.__mutualMet = mutualMet
 
 class MainFrame(wx.Frame):
     def __init__(self):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(480, 300), style=style)
-        pageOne = buildPageOne()
-        pageTwo = buildPageTwo()
-        pageThree = buildPageThree()
+        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
+        self.CenterOnScreen()
+        pageOne = pageOneLogic()
+        pageTwo = pageTwoLogic()
+        pageThree = pageThreeLogic()
+        mutualMet = mutualMethods()
 
         # Create a panel and notebook (tabs holder)
         panel = wx.Panel(self)
         nb = wx.Notebook(panel)
 
         # Create the tab windows
-        tab1 = TabOne(nb, pageOne)
-        tab2 = TabTwo(nb,pageTwo)
-        tab3 = TabThree(nb, pageThree)
+        tab1 = TabOne(nb, pageOne, mutualMet)
+        tab2 = TabTwo(nb,pageTwo, mutualMet)
+        tab3 = TabThree(nb, pageThree, mutualMet)
 
         # Add the windows to tabs and name them.
         nb.AddPage(tab1,"Locating Prices Coordinate")

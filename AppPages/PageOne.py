@@ -8,44 +8,47 @@ from scipy.stats import pearsonr
 import numpy as np
 import math
 
-
-class buildPageOne:
+class pageOneLogic:
     def __init__(self):
         self.__whCommunication = whCommunication()
-        self.__branchesInChains = self.__getBranchesInChains()
 
+    # Run pearson algorithm
+    def findPriceCoordinate(self, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
+        # convert from class 'wx._core.DateTime' to type 'datetime.date'
+        startDate = self.__wxdate2pydate(startDate)
+        endDate = self.__wxdate2pydate(endDate)
+        # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
+        branch1_PricesForProducts = self.__buildInputsForPearson(chain1, branch1, startDate, endDate)
+        branch2_PricesForProducts = self.__buildInputsForPearson(chain2, branch2, startDate, endDate)
 
-    def __getBranchesInChains(self):
-        branchesAndChains = {}
-        query = "select chainName, branchName, codeMarket from dimBranch"
-        df = self.__whCommunication.executeQuery(query, [])
-        for index, row in df.iterrows():
-            if ((row['chainname'].decode('cp1255','strict')) not in branchesAndChains):
-                branchesAndChains[(row['chainname']).decode('cp1255','strict')] = {}
-            branchesAndChains[(row['chainname']).decode('cp1255', 'strict')][((row['branchname']).decode('cp1255', 'strict'))] = row['codemarket']
-        return branchesAndChains
+        pearsonResults = {}  # key- product, value- pearson correlation between the arrays of the 2 branches
+        if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
+            # loop on all barcode that are appear in two dictionary
+            for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
+                # check if the series contain the same values(two identical series- return sometimes 1 in pearson but its not really price fixing)
+                if (self.__all_same(branch1_PricesForProducts[barcode]) and self.__all_same(
+                        branch1_PricesForProducts[barcode])):
+                    if (branch1_PricesForProducts[barcode][0] == branch2_PricesForProducts[barcode][0]):  # if we have two identical series we have price correlation. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
+                        pearsonResults[barcode] = 1.0
+                        continue
+                        # #if we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8].nan values not interesting.
+                        # pearsonResults[barcode] = np.nan
 
-    #The algorithm will get codeMarkets- more easy to manage then two strings (brunchName, chainName)
-    def getMarketCodeOfBrunch(self, chain, brunch):
-        return (self.__branchesInChains[chain][brunch])
+                try:
+                    result = self.__pearsonCalc(branch1_PricesForProducts[barcode],
+                                                    branch2_PricesForProducts[barcode])
+                    if (result > 0):  # negative values not interesting
+                        pearsonResults[barcode] = result
+                except(ZeroDivisionError):
+                    continue
+                    # nan values not interesting
+                    # pearsonResults[barcode] = np.nan
 
-    def getAllBrunchNamesInchain(self, chain):
-        return (self.__branchesInChains[chain].keys())
+        # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
+        if (len(pearsonResults) > 0):
+            self.__writeResultsToCSV(pearsonResults)
 
-    def getAllChains(self):
-        return list(self.__branchesInChains.keys())
-
-    def chainExist(self, chainName):
-        if (chainName in self.__branchesInChains):
-            return True
-        else:
-            return False
-
-    def branchExist(self, chainName, branchName):
-        if (branchName in self.__branchesInChains[chainName]):
-            return True
-        else:
-            return False
+        return
 
     def __getProductsPrices(self, chain, branch, startDate, endDate):
         parameters = [chain, branch, str(startDate), str(endDate)]
@@ -62,7 +65,6 @@ class buildPageOne:
             return datetime.date(*ymd)
         else:
             return None
-
 
     # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
     def __buildInputsForPearson (self, chain, branch, startDate, endDate):
@@ -137,36 +139,10 @@ class buildPageOne:
     def __all_same(self, items):
         return all(x == items[0] for x in items)
 
-    #run kendel/pearson here
-    def findPriceCoordinate(self, chain1, branch1, chain2, branch2, startDate, endDate):
-        #convert from class 'wx._core.DateTime' to type 'datetime.date'
-        startDate = self.__wxdate2pydate(startDate)
-        endDate = self.__wxdate2pydate(endDate)
-        #function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
-        branch1_PricesForProducts = self.__buildInputsForPearson (chain1, branch1, startDate, endDate)
-        branch2_PricesForProducts = self.__buildInputsForPearson (chain2, branch2, startDate, endDate)
-
-
-        pearsonResults = {} #key- product, value- pearson correlation between the arrays of the 2 branches
-        if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
-             #loop on all barcode that are appear in two dictionary
-             for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
-                 #check if the series contain the same value. if it those- set nan at the result (for example two identical series- return 1 in pearson but its not really price fixing)
-                 if (self.__all_same(branch1_PricesForProducts[barcode]) and self.__all_same(branch1_PricesForProducts[barcode])):
-                  if (branch1_PricesForProducts[barcode][0] != branch2_PricesForProducts[barcode][0]): #if we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8]
-                      pearsonResults[barcode] = np.nan
-                  else:#if we have two identical series we have price correlation. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
-                      pearsonResults[barcode] = 1.0
-                  continue
-
-                 try:
-                     result = self.__pearsonCalc(branch1_PricesForProducts[barcode], branch2_PricesForProducts[barcode])
-                     pearsonResults[barcode] = result
-                 except(ZeroDivisionError):
-                     pearsonResults[barcode] = np.nan
-
-
-
-        #write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
-        print (pearsonResults)
+    def __writeResultsToCSV(self, results):
+        #barcode
+        #product name
+        #correlation score
+        #foreach branch that insert make column of the price's series
+        print("")
         return
