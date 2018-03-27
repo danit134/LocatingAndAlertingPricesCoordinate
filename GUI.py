@@ -81,8 +81,11 @@ class TabOne(wx.Panel):
         elif not (os.path.exists(self.__dirPicker.GetPath())):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
         else:
-            self.__pageOne.findPriceCoordinate(self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
-            tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results file")
+            priceCoordinateFound = self.__pageOne.findPriceCoordinate(self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
+            if (priceCoordinateFound):
+                tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! Price coordinate found, check the results file")
+            else:
+                tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! No price coordinate found")
 
     def drawCorrelateInCity(self):
         wx.StaticText(self, label='City', pos=(15, 40))

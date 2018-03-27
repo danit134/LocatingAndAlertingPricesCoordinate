@@ -9,7 +9,7 @@ class mutualMethods:
         self.__productsByBarcode = self.__getAllProductsQuery() #key-barcode, value- product name
         self.__productsByNames = dict((v, k) for k, v in self.__productsByBarcode.iteritems())
 
-    #get the list of all produsts in the warehouse
+    #get the list of all products in the warehouse
     def __getAllProductsQuery(self):
         query = "select barcode, productName from dimProduct"
         df = self.__whCommunication.executeQuery(query, [])
@@ -23,6 +23,9 @@ class mutualMethods:
 
     def getBarcode(self, productName):
         return (self.__productsByNames[productName])
+
+    def getProductName(self, barcode):
+        return (self.__productsByBarcode[barcode])
 
     def productExist(self, productName):
         if (productName in self.__productsByNames.keys()):

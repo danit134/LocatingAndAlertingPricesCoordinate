@@ -7,21 +7,26 @@ import collections
 from scipy.stats import pearsonr
 import numpy as np
 import math
+from AppPages.mutualMethods import *
+import csv
+import os
+import itertools
 
 class pageOneLogic:
     def __init__(self):
         self.__whCommunication = whCommunication()
+        self.__mutualMet = mutualMethods()
 
     # Run pearson algorithm
-    def findPriceCoordinate(self, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
+    def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
         startDate = self.__wxdate2pydate(startDate)
         endDate = self.__wxdate2pydate(endDate)
         # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
-        branch1_PricesForProducts = self.__buildInputsForPearson(chain1, branch1, startDate, endDate)
-        branch2_PricesForProducts = self.__buildInputsForPearson(chain2, branch2, startDate, endDate)
+        branch1_PricesForProducts = self.__buildInputsForPearson(city, chain1, branch1, startDate, endDate)
+        branch2_PricesForProducts = self.__buildInputsForPearson(city, chain2, branch2, startDate, endDate)
 
-        pearsonResults = {}  # key- product, value- pearson correlation between the arrays of the 2 branches
+        pearsonResults = {}  # key- product's barcode, value- pearson correlation score between the arrays of the 2 branches
         if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
             # loop on all barcode that are appear in two dictionary
             for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
@@ -46,13 +51,14 @@ class pageOneLogic:
 
         # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
         if (len(pearsonResults) > 0):
-            self.__writeResultsToCSV(pearsonResults)
+            fileName = city+"_"+chain1+"-"+branch1+"_"+chain2+"-"+branch2+"_"+str(startDate)+"_"+str(endDate)
+            self.__writeResultsToCSV(pearsonResults, pathToResultFile, fileName)
+            return True
+        return False
 
-        return
-
-    def __getProductsPrices(self, chain, branch, startDate, endDate):
-        parameters = [chain, branch, str(startDate), str(endDate)]
-        query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
+    def __getProductsPrices(self,city, chain, branch, startDate, endDate):
+        parameters = [city, chain, branch, str(startDate), str(endDate)]
+        query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE cityName=? AND chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
         df = self.__whCommunication.executeQuery(query, parameters)
         return df
 
@@ -67,8 +73,8 @@ class pageOneLogic:
             return None
 
     # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
-    def __buildInputsForPearson (self, chain, branch, startDate, endDate):
-        df = self.__getProductsPrices(chain, branch, startDate, endDate)
+    def __buildInputsForPearson (self, city, chain, branch, startDate, endDate):
+        df = self.__getProductsPrices(city, chain, branch, startDate, endDate)
         if (df.empty):
             return None
 
@@ -139,10 +145,14 @@ class pageOneLogic:
     def __all_same(self, items):
         return all(x == items[0] for x in items)
 
-    def __writeResultsToCSV(self, results):
-        #barcode
-        #product name
-        #correlation score
-        #foreach branch that insert make column of the price's series
-        print("")
-        return
+    def __writeResultsToCSV(self, results, pathToResultFile, fileName):
+        productNameColumnTemp = [self.__mutualMet.getProductName(barcode) for barcode in results.keys()]
+        productNameColumn = [x.encode('cp1255', 'strict') for x in productNameColumnTemp]
+        barcodeColumn = results.keys()
+        correlationScoreColumn =  results.values()
+        foupath = os.path.join(pathToResultFile, '%s.csv' % fileName)
+        fou = open(foupath, 'wb')
+        writer = csv.writer(fou)
+        writer.writerow(["Product Barcode", "Product Name", "Correlation Score"])
+        for val in itertools.izip(barcodeColumn, productNameColumn, correlationScoreColumn):
+            writer.writerow(val)
