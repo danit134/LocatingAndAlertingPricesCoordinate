@@ -6,20 +6,26 @@ class mutualMethods:
     def __init__(self):
         self.__whCommunication = whCommunication()
         self.__branchesAndChainsInCity = self.__getBranchesAndChainsInCity()
-        self.__productsByBarcode = self.__getAllProductsQuery() #key-barcode, value- product name
-        self.__productsByNames = dict((v, k) for k, v in self.__productsByBarcode.iteritems())
+        self.__sortedProductsNames = []
+        self.__productsByNames = self.__getAllProductsQuery() #key-product name, value- barcode
+        self.__productsByBarcode = dict((v, k) for k, v in self.__productsByNames.iteritems()) #key-barcode, value- product name
+
 
     #get the list of all products in the warehouse
     def __getAllProductsQuery(self):
-        query = "select barcode, productName from dimProduct"
-        df = self.__whCommunication.executeQuery(query, [])
+        likeParm = u'%[אבגדהוזחטיכלמנסעפצקרשת]%' #define the order of the alpha-beit hebrew so we can sort the products names
+        parameters = [likeParm]
+        query = "select barcode, productName from dimProduct order by case when productName like ? then productName end collate Hebrew_CI_AS"
+        df = self.__whCommunication.executeQuery(query, parameters)
         allProducts = {}
         for index, row in df.iterrows():
-            allProducts[row['barcode']] = row['productname'].decode('cp1255', 'strict')
+            productName = row['productname'].decode('cp1255', 'strict')
+            allProducts[productName] = row['barcode']
+            self.__sortedProductsNames.append(productName)
         return allProducts
 
     def getAllProductsNames(self):
-        return self.__productsByNames.keys()
+        return self.__sortedProductsNames
 
     def getBarcode(self, productName):
         return (self.__productsByNames[productName])

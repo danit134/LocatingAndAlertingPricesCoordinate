@@ -13,9 +13,9 @@ import os
 import itertools
 
 class pageOneLogic:
-    def __init__(self):
+    def __init__(self, mutualMet):
         self.__whCommunication = whCommunication()
-        self.__mutualMet = mutualMethods()
+        self.__mutualMet = mutualMet
 
     def findPriceCoordinateInCity (self, city, startDate, endDate, pathToResultFile):
         branchesAndChains = self.__mutualMet.getAllBranchesAndChainsInCity(city)

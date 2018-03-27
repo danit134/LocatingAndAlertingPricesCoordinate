@@ -11,9 +11,11 @@ from AppPages.PageOne import *
 from AppPages.PageTwo import *
 from AppPages.PageThree import *
 from AppPages.mutualMethods import *
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib as mpl
 
 # Define the tab content as classes:
-
 class TabOne(wx.Panel):
     def __init__(self, parent, pageOne, mutualMet):
         wx.Panel.__init__(self, parent)
@@ -189,9 +191,26 @@ class TabTwo(wx.Panel):
             tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
 
         else:
+
             self.__barcode = self.__mutualMet.getBarcode(self.__product.GetValue())
-            plt = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
-            plt.show()
+            title, text1, datekey1, cost1, text2, datekey2, cost2 = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
+            # plt = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
+            # plt.show()
+            graphFrame = wx.Frame(None, -1, title=title)
+            icon = wx.Icon()
+            icon.CopyFromBitmap(wx.Bitmap("graphIcon.png", wx.BITMAP_TYPE_ANY))
+            graphFrame.SetIcon(icon)
+            self.fig = Figure()
+            self.axes = self.fig.add_subplot(111)
+            mpl.style.use('default')
+            self.axes.set_title(title.format('default'), color='C0')
+            self.axes.set(xlabel='Date', ylabel='Price (in Shekels)')
+            self.axes.plot(datekey1, cost1, "-o", alpha=0.7, label= text1, color='red')
+            self.axes.plot(datekey2, cost2, "-o", alpha=0.4, label= text2, color='blue')
+            self.fig.autofmt_xdate(rotation=40)
+            self.canvas = FigureCanvas(graphFrame, -1, self.fig)
+            self.axes.legend()
+            graphFrame.Show()
 
     def getBranches(self, event):
         self.__branch.Set(self.__pageTwo.getAllBrunchNamesInchain(self.__chain.GetValue()))
@@ -212,10 +231,10 @@ class MainFrame(wx.Frame):
         icon.CopyFromBitmap(wx.Bitmap("icon.ico", wx.BITMAP_TYPE_ANY))
         self.SetIcon(icon)
 
-        pageOne = pageOneLogic()
+        mutualMet = mutualMethods()
+        pageOne = pageOneLogic(mutualMet)
         pageTwo = pageTwoLogic()
         pageThree = pageThreeLogic()
-        mutualMet = mutualMethods()
 
         # Create a panel and notebook (tabs holder)
         panel = wx.Panel(self)
@@ -231,7 +250,7 @@ class MainFrame(wx.Frame):
         nb.AddPage(tab2,"Prices for Product")
         nb.AddPage(tab3, "Cheapest Shopping Basket")
 
-        # Set noteboook in a sizer to create the layout
+        # Set notebook in a sizer to create the layout
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         panel.SetSizer(sizer)
@@ -246,4 +265,3 @@ if __name__ == '__main__':
     MainFrame().Show()
     #start the event loop
     app.MainLoop()
-

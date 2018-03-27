@@ -23,14 +23,16 @@ class pageTwoLogic:
         df2 = self.__whCommunication.executeQuery(query, parameters2)
         text1 = bidialg.get_display(chain1 + '- '+ branch1)
         text2 = bidialg.get_display(chain2 + '- ' + branch2)
-        plt.plot(df1['datekey'], df1['cost'], "-o", alpha=0.7, label= text1, color='red')
-        plt.plot(df2['datekey'], df2['cost'], "-o", alpha=0.4, label=text2, color='blue')
-        plt.xticks(rotation=40)
-        # naming the x-axis
-        plt.xlabel('Date')
-        # naming the y-axis
-        plt.ylabel('Price (in Shekels)')
-        # plot title
-        plt.title('Prices For Product '+ product)
-        plt.legend()
-        return plt
+        title = 'Prices For Product '+ product
+        return title, text1, df1['datekey'], df1['cost'], text2, df2['datekey'], df2['cost']
+        # plt.plot(df1['datekey'], df1['cost'], "-o", alpha=0.7, label= text1, color='red')
+        # plt.plot(df2['datekey'], df2['cost'], "-o", alpha=0.4, label=text2, color='blue')
+        # plt.xticks(rotation=40)
+        # # naming the x-axis
+        # plt.xlabel('Date')
+        # # naming the y-axis
+        # plt.ylabel('Price (in Shekels)')
+        # # plot title
+        # plt.title('Prices For Product '+ product)
+        # plt.legend()
+        # return plt
