@@ -83,7 +83,7 @@ class TabOne(wx.Panel):
         else:
             priceCoordinateFound = self.__pageOne.findPriceCoordinate(self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
             if (priceCoordinateFound):
-                tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! Price coordinate found, check the results file")
+                tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! Price coordinate found, check the result file")
             else:
                 tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! No price coordinate found")
 
@@ -112,7 +112,7 @@ class TabOne(wx.Panel):
         elif not (os.path.exists(self.__dirPicker.GetPath())):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
         else:
-            self.__pageOne.findPriceCoordinate(self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
+            self.__pageOne.findPriceCoordinateInCity(self.__city.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
             tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results files")
 
     def onChecked(self, event):
@@ -208,6 +208,10 @@ class MainFrame(wx.Frame):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
         wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
         self.CenterOnScreen()
+        icon = wx.Icon()
+        icon.CopyFromBitmap(wx.Bitmap("icon.ico", wx.BITMAP_TYPE_ANY))
+        self.SetIcon(icon)
+
         pageOne = pageOneLogic()
         pageTwo = pageTwoLogic()
         pageThree = pageThreeLogic()

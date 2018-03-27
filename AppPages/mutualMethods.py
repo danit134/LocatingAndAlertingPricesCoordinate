@@ -56,6 +56,9 @@ class mutualMethods:
     def getAllChainsInCity(self, city):
         return list(self.__branchesAndChainsInCity[city].keys())
 
+    def getAllBranchesAndChainsInCity (self, city):
+        return (self.__branchesAndChainsInCity[city])
+
     def getAllCities(self):
         return list(self.__branchesAndChainsInCity.keys())
 

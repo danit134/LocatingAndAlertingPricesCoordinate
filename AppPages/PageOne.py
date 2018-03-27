@@ -17,7 +17,19 @@ class pageOneLogic:
         self.__whCommunication = whCommunication()
         self.__mutualMet = mutualMethods()
 
-    # Run pearson algorithm
+    def findPriceCoordinateInCity (self, city, startDate, endDate, pathToResultFile):
+        branchesAndChains = self.__mutualMet.getAllBranchesAndChainsInCity(city)
+        allCombinationsOfChains = map(dict, itertools.combinations(branchesAndChains.iteritems(), 2)) #contain dictionaries of all chains combination in city
+        for chainPair in allCombinationsOfChains:
+            chain1 = list(chainPair.keys())[0]
+            chain2 = list(chainPair.keys())[1]
+            branchs1 = branchesAndChains[chain1]
+            branchs2 = branchesAndChains[chain2]
+            allCombinationsOfBranches = list(itertools.product(branchs1, branchs2))
+            for (branch1,branch2) in allCombinationsOfBranches:
+                self.findPriceCoordinate(city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile)
+
+    # Run pearson algorithm on 2 branches
     def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
         startDate = self.__wxdate2pydate(startDate)
@@ -51,7 +63,7 @@ class pageOneLogic:
 
         # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
         if (len(pearsonResults) > 0):
-            fileName = city+"_"+chain1+"-"+branch1+"_"+chain2+"-"+branch2+"_"+str(startDate)+"_"+str(endDate)
+            fileName = city+"_"+chain1+" "+branch1+"_"+chain2+" "+branch2+"_"+str(startDate)+"_"+str(endDate)
             self.__writeResultsToCSV(pearsonResults, pathToResultFile, fileName)
             return True
         return False
@@ -150,6 +162,7 @@ class pageOneLogic:
         productNameColumn = [x.encode('cp1255', 'strict') for x in productNameColumnTemp]
         barcodeColumn = results.keys()
         correlationScoreColumn =  results.values()
+        fileName = fileName.replace(u'"', '')
         foupath = os.path.join(pathToResultFile, '%s.csv' % fileName)
         fou = open(foupath, 'wb')
         writer = csv.writer(fou)
