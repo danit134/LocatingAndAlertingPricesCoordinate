@@ -225,7 +225,7 @@ class TabThree(wx.Panel):
 class MainFrame(wx.Frame):
     def __init__(self):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
+        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(530, 350), style=style)
         self.CenterOnScreen()
         icon = wx.Icon()
         icon.CopyFromBitmap(wx.Bitmap("icon.ico", wx.BITMAP_TYPE_ANY))
