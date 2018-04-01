@@ -12,6 +12,7 @@ import csv
 import os
 import itertools
 
+
 class pageOneLogic:
     def __init__(self, mutualMet):
         self.__whCommunication = whCommunication()
@@ -29,6 +30,13 @@ class pageOneLogic:
             for (branch1,branch2) in allCombinationsOfBranches:
                 self.findPriceCoordinate(city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile)
 
+    def __CountSamePrice(self, startDate, endDate, chain1, chain2, product, productPrice):
+        parameters = [startDate, endDate, chain1, chain2, product, productPrice]
+        query = "SELECT COUNT(DISTINCT chainName) AS count FROM PricingProductFacts WHERE dateKey BETWEEN ? AND ? AND chainName!=? AND chainName!=? AND barcode=? AND cost=?"
+        df = self.__whCommunication.executeQuery(query, parameters)
+        count = df.iloc[0]['count']
+        return count
+
     # Run pearson algorithm on 2 branches
     def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
@@ -45,15 +53,19 @@ class pageOneLogic:
                 # check if the series contain the same values(two identical series- return sometimes 1 in pearson but its not really price fixing)
                 if (self.__all_same(branch1_PricesForProducts[barcode]) and self.__all_same(
                         branch1_PricesForProducts[barcode])):
-                    if (branch1_PricesForProducts[barcode][0] == branch2_PricesForProducts[barcode][0]):  # if we have two identical series we have price correlation. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
-                        pearsonResults[barcode] = 1.0
+                    if (branch1_PricesForProducts[barcode][0] == branch2_PricesForProducts[barcode][0]):  # if we have two identical series we maybe have price correlation. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
+                        threshold = 0 # number of different branches we allow to have the same price as the 2 branches for current product in this iteration
+                        productPrice = branch1_PricesForProducts[barcode][0]
+                        count = self.__CountSamePrice (startDate, endDate, chain1, chain2, barcode, productPrice)
+                        if (count < threshold): #we check if the identical series are really price cooridnate bwtween 2 branches. (or maybe this price is set in amother chains and then its not cooridnate)
+                            pearsonResults[barcode] = 1.0
                         continue
                         # #if we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8].nan values not interesting.
                         # pearsonResults[barcode] = np.nan
-
+                    else: #the 2 series different from each other but each series have identical price (return sometimes 1 in pearson but its not really price fixing)
+                        continue
                 try:
-                    result = self.__pearsonCalc(branch1_PricesForProducts[barcode],
-                                                    branch2_PricesForProducts[barcode])
+                    result = self.__pearsonCalc(branch1_PricesForProducts[barcode], branch2_PricesForProducts[barcode])
                     if (result > 0):  # negative values not interesting
                         pearsonResults[barcode] = result
                 except(ZeroDivisionError):
