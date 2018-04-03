@@ -22,7 +22,7 @@ class TabOne(wx.Panel):
         self.__pageOne = pageOne
         self.__mutualMet = mutualMet
         self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
         self.correlateBetweenTwoBranches.SetValue(True)
         self.correlateInCity.SetValue(False)
         self.Bind(wx.EVT_CHECKBOX, self.onChecked)
@@ -92,15 +92,22 @@ class TabOne(wx.Panel):
     def drawCorrelateInCity(self):
         wx.StaticText(self, label='City', pos=(15, 40))
         self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 40))  # show all the chains
-        wx.StaticText(self, label='Start date', pos=(15, 90))
-        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 90))
-        wx.StaticText(self, label='End date', pos=(175, 90))
-        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 90))
+        self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
+        wx.StaticText(self, label='Area', pos=(15, 70))
+        self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 70))
+        wx.StaticText(self, label='Start date', pos=(15, 160))
+        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
+        wx.StaticText(self, label='End date', pos=(175, 160))
+        self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
         wx.StaticText(self, label='Results File Path', pos=(55, 215))
         self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(150, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
         btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateInCity)
+
+    def getAreasInCity(self, event):
+        self.__areaList.Clear()
+        self.__areaList.InsertItems(self.__pageOne.getAllAreasInCity(self.__city.GetValue()),0)
 
     def OnClick_CorrelateInCity(self, event):
         if not (self.__mutualMet.cityExist(self.__city.GetValue())):
@@ -114,16 +121,20 @@ class TabOne(wx.Panel):
         elif not (os.path.exists(self.__dirPicker.GetPath())):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
         else:
+            areasNames = []
+            areasIndexs = self.__area.GetSelections()
+            for index in areasIndexs:
+                areasNames.append(self.__area.GetString(index))
             self.__pageOne.findPriceCoordinateInCity(self.__city.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
             tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results files")
 
     def onChecked(self, event):
         cb = event.GetEventObject()
-        if (cb.GetLabel() == 'Find correlate between all branches in specific city' and cb.GetValue() == True):
+        if (cb.GetLabel() == 'Find correlate in specific city' and cb.GetValue() == True):
             self.DestroyChildren()
             self.drawCorrelateInCity()
             self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
             self.correlateBetweenTwoBranches.SetValue(False)
             self.correlateInCity.SetValue(True)
             self.Bind(wx.EVT_CHECKBOX, self.onChecked)
@@ -131,7 +142,7 @@ class TabOne(wx.Panel):
             self.DestroyChildren()
             self.drawCorrelateBetweenTwoBranches()
             self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between all branches in specific city', pos=(230, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
             self.correlateInCity.SetValue(False)
             self.correlateBetweenTwoBranches.SetValue(True)
             self.Bind(wx.EVT_CHECKBOX, self.onChecked)
