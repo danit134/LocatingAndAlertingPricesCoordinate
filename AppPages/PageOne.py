@@ -28,14 +28,30 @@ class pageOneLogic:
             areaList.append(row['areaname'].decode('cp1255', 'strict'))
         return areaList
 
-    def findPriceCoordinateInCity (self, city, startDate, endDate, pathToResultFile):
-        branchesAndChains = self.__mutualMet.getAllBranchesAndChainsInCity(city)
-        allCombinationsOfChains = map(dict, itertools.combinations(branchesAndChains.iteritems(), 2)) #contain dictionaries of all chains combination in city
-        for chainPair in allCombinationsOfChains:
+    def findPriceCoordinateInCity (self, city, areasNames, startDate, endDate, pathToResultFile):
+        branchesAndChainsInArea = {}
+        for area in areasNames:
+            parameters = [city, area]
+            query = "SELECT chainName, branchName FROM dimBranch WHERE cityName=? AND areaName=?"
+            df = self.__whCommunication.executeQuery(query, parameters)
+            branchesAndChainsInArea[area] = {}
+            for index, row in df.iterrows():
+                chainName = (row['chainname']).decode('cp1255', 'strict')
+                branchName = (row['branchname']).decode('cp1255', 'strict')
+                if (chainName not in branchesAndChainsInArea[area]):
+                    branchesAndChainsInArea[area][chainName] = []
+                    branchesAndChainsInArea[area][chainName].append(branchName)
+                else:
+                    branchesAndChainsInArea[area][chainName].append(branchName)
+
+        # branchesAndChains = self.__mutualMet.getAllBranchesAndChainsInCity(city)
+        branchesAndChainsInArea = branchesAndChainsInArea[area]
+        allCombinationsOfChainsInArea = map(dict, itertools.combinations(branchesAndChainsInArea.iteritems(), 2)) #contain dictionaries of all chains combination in city
+        for chainPair in allCombinationsOfChainsInArea:
             chain1 = list(chainPair.keys())[0]
             chain2 = list(chainPair.keys())[1]
-            branchs1 = branchesAndChains[chain1]
-            branchs2 = branchesAndChains[chain2]
+            branchs1 = branchesAndChainsInArea[chain1]
+            branchs2 = branchesAndChainsInArea[chain2]
             allCombinationsOfBranches = list(itertools.product(branchs1, branchs2))
             for (branch1,branch2) in allCombinationsOfBranches:
                 self.findPriceCoordinate(city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile)

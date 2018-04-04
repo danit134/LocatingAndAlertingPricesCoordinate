@@ -122,10 +122,10 @@ class TabOne(wx.Panel):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
         else:
             areasNames = []
-            areasIndexs = self.__area.GetSelections()
+            areasIndexs = self.__areaList.GetSelections()
             for index in areasIndexs:
-                areasNames.append(self.__area.GetString(index))
-            self.__pageOne.findPriceCoordinateInCity(self.__city.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
+                areasNames.append(self.__areaList.GetString(index))
+            self.__pageOne.findPriceCoordinateInCity(self.__city.GetValue(),areasNames, self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
             tkMessageBox.showinfo("Info", "The Coordinate Algorithm finish! check the results files")
 
     def onChecked(self, event):
