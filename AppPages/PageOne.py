@@ -18,16 +18,6 @@ class pageOneLogic:
         self.__whCommunication = whCommunication()
         self.__mutualMet = mutualMet
 
-
-    def getAllAreasInCity (self, city):
-        parameters = [city]
-        query = "SELECT areaName FROM dimArea WHERE cityName=?"
-        df = self.__whCommunication.executeQuery(query, parameters)
-        areaList = []
-        for index, row in df.iterrows():
-            areaList.append(row['areaname'].decode('cp1255', 'strict'))
-        return areaList
-
     def findPriceCoordinateInCity (self, city, areasNames, startDate, endDate, pathToResultFile):
         branchesAndChainsInArea = {}
         for area in areasNames:

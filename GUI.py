@@ -47,8 +47,8 @@ class TabOne(wx.Panel):
         self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
         wx.StaticText(self, label='End date', pos=(175, 160))
         self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
-        wx.StaticText(self, label='Results File Path', pos=(55, 215))
-        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(150, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        wx.StaticText(self, label='Results File Path', pos=(80, 215))
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
         btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateBetweenTwoBranches)
@@ -99,15 +99,15 @@ class TabOne(wx.Panel):
         self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
         wx.StaticText(self, label='End date', pos=(175, 160))
         self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
-        wx.StaticText(self, label='Results File Path', pos=(55, 215))
-        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(150, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        wx.StaticText(self, label='Results File Path', pos=(80, 215))
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
         btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateInCity)
 
     def getAreasInCity(self, event):
         self.__areaList.Clear()
-        self.__areaList.InsertItems(self.__pageOne.getAllAreasInCity(self.__city.GetValue()),0)
+        self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()),0)
 
     def OnClick_CorrelateInCity(self, event):
         if not (self.__mutualMet.cityExist(self.__city.GetValue())):
@@ -230,13 +230,30 @@ class TabTwo(wx.Panel):
 class TabThree(wx.Panel):
     def __init__(self, parent, pageThree, mutualMet):
         wx.Panel.__init__(self, parent)
-        self.__pageTwo = pageThree
+        self.__pageThree = pageThree
         self.__mutualMet = mutualMet
+        static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Details', size=(210, 150), pos=(5,10))
+        wx.StaticText(self, label='City', pos=(15, 30))
+        self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 30))  # show all the chains
+        self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
+        wx.StaticText(self, label='Area', pos=(15, 60))
+        self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 60))
+        wx.StaticText(self, label='Date', pos=(15, 120))
+        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(65, 120))
+        static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Shop Basket', size=(310, 180), pos=(220,10))
+        self.__productsList = wx.ListBox(self, style=wx.LB_MULTIPLE, choices=self.__mutualMet.getAllProductsNames(), pos=(225, 30))
+        wx.StaticText(self, label='Results File Path', pos=(80, 215))
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        btn = wx.Button(self, label='Find The Cheapest Basket!', pos=(200, 255))
+
+    def getAreasInCity(self, event):
+        self.__areaList.Clear()
+        self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()), 0)
 
 class MainFrame(wx.Frame):
     def __init__(self):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
-        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(530, 350), style=style)
+        wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
         self.CenterOnScreen()
         icon = wx.Icon()
         icon.CopyFromBitmap(wx.Bitmap("Icons\\appIcon.ico", wx.BITMAP_TYPE_ANY))

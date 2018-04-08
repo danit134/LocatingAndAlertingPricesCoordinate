@@ -68,6 +68,15 @@ class mutualMethods:
     def getAllCities(self):
         return list(self.__branchesAndChainsInCity.keys())
 
+    def getAllAreasInCity (self, city):
+        parameters = [city]
+        query = "SELECT areaName FROM dimArea WHERE cityName=?"
+        df = self.__whCommunication.executeQuery(query, parameters)
+        areaList = []
+        for index, row in df.iterrows():
+            areaList.append(row['areaname'].decode('cp1255', 'strict'))
+        return areaList
+
     def cityExist(self, city):
         if (city in self.__branchesAndChainsInCity):
             return True
