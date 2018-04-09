@@ -77,6 +77,12 @@ class mutualMethods:
             areaList.append(row['areaname'].decode('cp1255', 'strict'))
         return areaList
 
+    def getAllBranchesInArea(self,city ,areaName):
+        parameters = [city, areaName]
+        query = "SELECT chainName, branchName FROM dimBranch WHERE cityName=? AND areaName=?"
+        df = self.__whCommunication.executeQuery(query, parameters)
+        return df
+
     def cityExist(self, city):
         if (city in self.__branchesAndChainsInCity):
             return True

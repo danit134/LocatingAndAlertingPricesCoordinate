@@ -14,6 +14,7 @@ from AppPages.mutualMethods import *
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
+import wx.grid
 
 # Define the tab content as classes:
 class TabOne(wx.Panel):
@@ -22,7 +23,7 @@ class TabOne(wx.Panel):
         self.__pageOne = pageOne
         self.__mutualMet = mutualMet
         self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
+        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(240, 5))
         self.correlateBetweenTwoBranches.SetValue(True)
         self.correlateInCity.SetValue(False)
         self.Bind(wx.EVT_CHECKBOX, self.onChecked)
@@ -48,7 +49,7 @@ class TabOne(wx.Panel):
         wx.StaticText(self, label='End date', pos=(175, 160))
         self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
         wx.StaticText(self, label='Results File Path', pos=(80, 215))
-        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="Choose Directory", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
         btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateBetweenTwoBranches)
@@ -95,12 +96,13 @@ class TabOne(wx.Panel):
         self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
         wx.StaticText(self, label='Area', pos=(15, 70))
         self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 70))
+        self.__areaList.Bind(wx.EVT_LISTBOX_DCLICK, self.getBranchesInArea)
         wx.StaticText(self, label='Start date', pos=(15, 160))
         self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
         wx.StaticText(self, label='End date', pos=(175, 160))
         self.__endDate = wx.adv.DatePickerCtrl(self, pos=(230, 160))
         wx.StaticText(self, label='Results File Path', pos=(80, 215))
-        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="Choose Directory", pos=(170, 210),size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         # self.__dirPicker = wx.DirPickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Select a folder", wx.DefaultPosition,wx.DefaultSize, wx.DIRP_DEFAULT_STYLE)
         btn = wx.Button(self, label='Find Price Coordinate!', pos=(200, 255))
         btn.Bind(wx.EVT_BUTTON, self.OnClick_CorrelateInCity)
@@ -109,6 +111,24 @@ class TabOne(wx.Panel):
         self.__areaList.Clear()
         self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()),0)
 
+    def getBranchesInArea(self,event):
+        AreaClicked = event.GetString()
+        branchesInAreaDF = self.__mutualMet.getAllBranchesInArea(self.__city.GetValue(), AreaClicked)
+        branchesFrame = wx.Frame(None, -1, title="branches in area: " + AreaClicked, size=(500,300))
+        grid = wx.grid.Grid(branchesFrame, -1)
+        numOfColumns = branchesInAreaDF.shape[1]
+        numOfRows = branchesInAreaDF.shape[0]
+        grid.CreateGrid(numOfRows, numOfColumns) #set the dimensions of the grid
+        grid.SetColLabelValue(0, "Chain Name")
+        grid.SetColLabelValue(1, "Branch Name")
+        for rowNum in range (numOfRows):
+            for colNum in range (numOfColumns):
+                grid.SetRowSize(rowNum, 50)
+                grid.SetColSize(colNum, 200)
+                cellString = branchesInAreaDF.iloc[rowNum][colNum].decode('cp1255', 'strict')
+                grid.SetCellValue(rowNum, colNum, cellString)
+                grid.SetReadOnly(rowNum, colNum)
+        branchesFrame.Show()
     def OnClick_CorrelateInCity(self, event):
         if not (self.__mutualMet.cityExist(self.__city.GetValue())):
             tkMessageBox.showinfo("Error", "City not exist!")
@@ -202,7 +222,6 @@ class TabTwo(wx.Panel):
             tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
 
         else:
-
             self.__barcode = self.__mutualMet.getBarcode(self.__product.GetValue())
             title, text1, datekey1, cost1, text2, datekey2, cost2 = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
             # plt = self.__pageTwo.getPricesForProduct(self.__barcode, self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue())
@@ -238,17 +257,37 @@ class TabThree(wx.Panel):
         self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
         wx.StaticText(self, label='Area', pos=(15, 60))
         self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 60))
+        self.__areaList.Bind(wx.EVT_LISTBOX_DCLICK, self.getBranchesInArea)
         wx.StaticText(self, label='Date', pos=(15, 120))
         self.__startDate = wx.adv.DatePickerCtrl(self, pos=(65, 120))
         static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Shop Basket', size=(310, 180), pos=(220,10))
         self.__productsList = wx.ListBox(self, style=wx.LB_MULTIPLE, choices=self.__mutualMet.getAllProductsNames(), pos=(225, 30))
         wx.StaticText(self, label='Results File Path', pos=(80, 215))
-        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="write here", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
+        self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="Choose Directory", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         btn = wx.Button(self, label='Find The Cheapest Basket!', pos=(200, 255))
 
     def getAreasInCity(self, event):
         self.__areaList.Clear()
         self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()), 0)
+
+    def getBranchesInArea(self,event):
+        AreaClicked = event.GetString()
+        branchesInAreaDF = self.__mutualMet.getAllBranchesInArea(self.__city.GetValue(), AreaClicked)
+        branchesFrame = wx.Frame(None, -1, title="branches in area: " + AreaClicked, size=(500,300))
+        grid = wx.grid.Grid(branchesFrame, -1)
+        numOfColumns = branchesInAreaDF.shape[1]
+        numOfRows = branchesInAreaDF.shape[0]
+        grid.CreateGrid(numOfRows, numOfColumns) #set the dimensions of the grid
+        grid.SetColLabelValue(0, "Chain Name")
+        grid.SetColLabelValue(1, "Branch Name")
+        for rowNum in range (numOfRows):
+            for colNum in range (numOfColumns):
+                grid.SetRowSize(rowNum, 50)
+                grid.SetColSize(colNum, 200)
+                cellString = branchesInAreaDF.iloc[rowNum][colNum].decode('cp1255', 'strict')
+                grid.SetCellValue(rowNum, colNum, cellString)
+                grid.SetReadOnly(rowNum, colNum)
+        branchesFrame.Show()
 
 class MainFrame(wx.Frame):
     def __init__(self):
