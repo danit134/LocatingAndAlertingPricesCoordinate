@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from warehouseCommunication import *
+import wx
 
 class mutualMethods:
     def __init__(self):
@@ -101,3 +102,12 @@ class mutualMethods:
         else:
             return False
 
+    # assistance function that convert from class 'wx._core.DateTime' to type 'datetime.date'
+    def wxdate2pydate(self, date):
+        import datetime
+        assert isinstance(date, wx.DateTime)
+        if date.IsValid():
+            ymd = map(int, date.FormatISODate().split('-'))
+            return datetime.date(*ymd)
+        else:
+            return None

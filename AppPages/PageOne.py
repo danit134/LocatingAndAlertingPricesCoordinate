@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from warehouseCommunication import *
 import pandas as pd
-import wx
 import collections
 from scipy.stats import pearsonr
 import numpy as np
@@ -21,9 +19,7 @@ class pageOneLogic:
     def findPriceCoordinateInCity (self, city, areasNames, startDate, endDate, pathToResultFile):
         branchesAndChainsInArea = {}
         for area in areasNames:
-            parameters = [city, area]
-            query = "SELECT chainName, branchName FROM dimBranch WHERE cityName=? AND areaName=?"
-            df = self.__whCommunication.executeQuery(query, parameters)
+            df =  self.__mutualMet.getAllBranchesInArea(city, area)
             branchesAndChainsInArea[area] = {}
             for index, row in df.iterrows():
                 chainName = (row['chainname']).decode('cp1255', 'strict')
@@ -56,8 +52,8 @@ class pageOneLogic:
     # Run pearson algorithm on 2 branches
     def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
-        startDate = self.__wxdate2pydate(startDate)
-        endDate = self.__wxdate2pydate(endDate)
+        startDate = self.__mutualMet.wxdate2pydate(startDate)
+        endDate = self.__mutualMet.wxdate2pydate(endDate)
         # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
         branch1_PricesForProducts = self.__buildInputsForPearson(city, chain1, branch1, startDate, endDate)
         branch2_PricesForProducts = self.__buildInputsForPearson(city, chain2, branch2, startDate, endDate)
@@ -101,16 +97,6 @@ class pageOneLogic:
         query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE cityName=? AND chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
         df = self.__whCommunication.executeQuery(query, parameters)
         return df
-
-    # assistance function that convert from class 'wx._core.DateTime' to type 'datetime.date'
-    def __wxdate2pydate(self, date):
-        import datetime
-        assert isinstance(date, wx.DateTime)
-        if date.IsValid():
-            ymd = map(int, date.FormatISODate().split('-'))
-            return datetime.date(*ymd)
-        else:
-            return None
 
     # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
     def __buildInputsForPearson (self, city, chain, branch, startDate, endDate):

@@ -79,10 +79,10 @@ class TabOne(wx.Panel):
             tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
         elif (self.__startDate.GetValue() == self.__endDate.GetValue()):
             tkMessageBox.showinfo("Error", "Can't calculate price coordinate when start data equal end date (need at least 2 days)!")
-        elif not (os.path.isdir(self.__dirPicker.GetPath())):
-            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
         elif not (os.path.exists(self.__dirPicker.GetPath())):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
+        elif not (os.path.isdir(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
         else:
             priceCoordinateFound = self.__pageOne.findPriceCoordinate(self.__city.GetValue(), self.__chain1.GetValue(), self.__branch1.GetValue(), self.__chain2.GetValue(), self.__branch2.GetValue(), self.__startDate.GetValue(), self.__endDate.GetValue(), self.__dirPicker.GetPath())
             if (priceCoordinateFound):
@@ -96,6 +96,8 @@ class TabOne(wx.Panel):
         self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
         wx.StaticText(self, label='Area', pos=(15, 70))
         self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 70))
+        self.__selectAllAreas = wx.CheckBox(self, id=wx.ID_ANY, label='Select All', pos=(65, 122))
+        self.__selectAllAreas.Bind(wx.EVT_CHECKBOX, self.areasChecked)
         self.__areaList.Bind(wx.EVT_LISTBOX_DCLICK, self.getBranchesInArea)
         wx.StaticText(self, label='Start date', pos=(15, 160))
         self.__startDate = wx.adv.DatePickerCtrl(self, pos=(75, 160))
@@ -110,6 +112,19 @@ class TabOne(wx.Panel):
     def getAreasInCity(self, event):
         self.__areaList.Clear()
         self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()),0)
+
+    def areasChecked(self, event):
+        areaCount = self.__areaList.GetCount()
+        if (areaCount == 0):
+            self.__selectAllAreas.SetValue(False)
+        else:
+            cb = event.GetEventObject()
+            if (cb.GetValue() == False):
+                for i in range(self.__areaList.GetCount()):
+                    self.__areaList.Deselect(i)
+            else:
+                for i in range(self.__areaList.GetCount()):
+                    self.__areaList.SetSelection(i)
 
     def getBranchesInArea(self,event):
         AreaClicked = event.GetString()
@@ -129,6 +144,7 @@ class TabOne(wx.Panel):
                 grid.SetCellValue(rowNum, colNum, cellString)
                 grid.SetReadOnly(rowNum, colNum)
         branchesFrame.Show()
+
     def OnClick_CorrelateInCity(self, event):
         if not (self.__mutualMet.cityExist(self.__city.GetValue())):
             tkMessageBox.showinfo("Error", "City not exist!")
@@ -136,10 +152,10 @@ class TabOne(wx.Panel):
             tkMessageBox.showinfo("Error", "Please insert start date early then end date!")
         elif (self.__startDate.GetValue() == self.__endDate.GetValue()):
             tkMessageBox.showinfo("Error", "Can't calculate price coordinate when start data equal end date (need at least 2 days)!")
-        elif not (os.path.isdir(self.__dirPicker.GetPath())):
-            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
         elif not (os.path.exists(self.__dirPicker.GetPath())):
             tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
+        elif not (os.path.isdir(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error","The path you insert is not a directory! try insert again")
         else:
             areasNames = []
             areasIndexs = self.__areaList.GetSelections()
@@ -251,24 +267,40 @@ class TabThree(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.__pageThree = pageThree
         self.__mutualMet = mutualMet
-        static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Details', size=(210, 150), pos=(5,10))
+        static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Details', size=(210, 180), pos=(5,10))
         wx.StaticText(self, label='City', pos=(15, 30))
         self.__city = wx.ComboBox(self, choices=self.__mutualMet.getAllCities(), pos=(65, 30))  # show all the chains
         self.__city.Bind(wx.EVT_COMBOBOX, self.getAreasInCity)
         wx.StaticText(self, label='Area', pos=(15, 60))
         self.__areaList = wx.ListBox(self,style=wx.LB_MULTIPLE, choices=[], pos=(65, 60))
+        self.__selectAllAreas = wx.CheckBox(self, id=wx.ID_ANY, label='Select All', pos=(65, 112))
+        self.__selectAllAreas.Bind(wx.EVT_CHECKBOX, self.areasChecked)
         self.__areaList.Bind(wx.EVT_LISTBOX_DCLICK, self.getBranchesInArea)
-        wx.StaticText(self, label='Date', pos=(15, 120))
-        self.__startDate = wx.adv.DatePickerCtrl(self, pos=(65, 120))
+        wx.StaticText(self, label='Date', pos=(15, 145))
+        self.__date = wx.adv.DatePickerCtrl(self, pos=(65, 145))
         static_box = wx.StaticBox(parent=self, id=wx.ID_ANY, label='Shop Basket', size=(310, 180), pos=(220,10))
         self.__productsList = wx.ListBox(self, style=wx.LB_MULTIPLE, choices=self.__mutualMet.getAllProductsNames(), pos=(225, 30))
         wx.StaticText(self, label='Results File Path', pos=(80, 215))
         self.__dirPicker = wx.DirPickerCtrl(parent=self, id=wx.ID_ANY, message="Choose Directory", pos=(170, 210), size=(270, -1), style=wx.DIRP_DIR_MUST_EXIST | wx.DIRP_USE_TEXTCTRL | wx.DIRP_SMALL)
         btn = wx.Button(self, label='Find The Cheapest Basket!', pos=(200, 255))
+        btn.Bind(wx.EVT_BUTTON, self.OnClick)
 
     def getAreasInCity(self, event):
         self.__areaList.Clear()
         self.__areaList.InsertItems(self.__mutualMet.getAllAreasInCity(self.__city.GetValue()), 0)
+
+    def areasChecked(self, event):
+        areaCount = self.__areaList.GetCount()
+        if (areaCount == 0):
+            self.__selectAllAreas.SetValue(False)
+        else:
+            cb = event.GetEventObject()
+            if (cb.GetValue() == False):
+                for i in range(areaCount):
+                    self.__areaList.Deselect(i)
+            else:
+                for i in range(self.__areaList.GetCount()):
+                    self.__areaList.SetSelection(i)
 
     def getBranchesInArea(self,event):
         AreaClicked = event.GetString()
@@ -289,6 +321,34 @@ class TabThree(wx.Panel):
                 grid.SetReadOnly(rowNum, colNum)
         branchesFrame.Show()
 
+    def getAllSelections (self, list):
+        listIndexs = list.GetSelections()
+        listStrings = []
+        for index in listIndexs:
+            listStrings.append(list.GetString(index))
+        return listStrings
+
+    def OnClick(self, event):
+        if not (self.__mutualMet.cityExist(self.__city.GetValue())):
+            tkMessageBox.showinfo("Error", "City not exist!")
+        elif (len(self.__areaList.GetSelections()) < 1):
+            tkMessageBox.showinfo("Error", "Need to choose at least one area!")
+        elif (len(self.__productsList.GetSelections()) < 1):
+            tkMessageBox.showinfo("Error", "Need to choose at least one product!")
+        elif not (os.path.exists(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error", "The directory you insert is not exist! try insert again")
+        elif not (os.path.isdir(self.__dirPicker.GetPath())):
+            tkMessageBox.showinfo("Error", "The path you insert is not a directory! try insert again")
+        else:
+            areasNames = self.getAllSelections(self.__areaList)
+            productsNames = self.getAllSelections(self.__productsList)
+            found = self.__pageThree.findTheCheapestBasket(self.__city.GetValue(), areasNames, productsNames, self.__date.GetValue(), self.__dirPicker.GetPath())
+            if (found):
+                tkMessageBox.showinfo("Info", "Cheapest basket found! Check the result file!")
+            else:
+                tkMessageBox.showinfo("Info", "Can't find the cheapest basket, base on the parameters you insert")
+
+
 class MainFrame(wx.Frame):
     def __init__(self):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
@@ -301,7 +361,7 @@ class MainFrame(wx.Frame):
         mutualMet = mutualMethods()
         pageOne = pageOneLogic(mutualMet)
         pageTwo = pageTwoLogic()
-        pageThree = pageThreeLogic()
+        pageThree = pageThreeLogic(mutualMet)
 
         # Create a panel and notebook (tabs holder)
         panel = wx.Panel(self)
