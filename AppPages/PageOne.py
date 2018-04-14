@@ -69,7 +69,7 @@ class pageOneLogic:
                         threshold = 0 # number of different branches we allow to have the same price as the 2 branches for current product in this iteration
                         productPrice = branch1_PricesForProducts[barcode][0]
                         count = self.__CountSamePrice (startDate, endDate, chain1, chain2, barcode, productPrice)
-                        if (count < threshold): #we check if the identical series are really price cooridnate bwtween 2 branches. (or maybe this price is set in amother chains and then its not cooridnate)
+                        if (count <= threshold): #we check if the identical series are really price cooridnate bwtween 2 branches. (or maybe this price is set in amother chains and then its not cooridnate)
                             pearsonResults[barcode] = 1.0
                         continue
                         # #if we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8].nan values not interesting.
