@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from bidi import algorithm as bidialg #help display the hebrew in labels of graph in correct way
 
 class pageTwoLogic:
-    def __init__(self):
-        self.__whCommunication = whCommunication()
+    def __init__(self, whCommunication):
+        self.__whCommunication = whCommunication
 
     # #convert query results to dataframe
     # def __as_pandas(self, cursor):

@@ -4,8 +4,8 @@ from warehouseCommunication import *
 import wx
 
 class mutualMethods:
-    def __init__(self):
-        self.__whCommunication = whCommunication()
+    def __init__(self, whCommunication):
+        self.__whCommunication = whCommunication
         self.__branchesAndChainsInCity = self.__getBranchesAndChainsInCity()
         self.__sortedProductsNames = []
         self.__productsByNames = self.__getAllProductsQuery() #key-product name, value- barcode

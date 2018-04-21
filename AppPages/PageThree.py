@@ -8,8 +8,8 @@ import itertools
 
 #page3- the cheapest shopping basket
 class pageThreeLogic:
-    def __init__(self, mutualMet):
-        self.__whCommunication = whCommunication()
+    def __init__(self, mutualMet, whCommunication):
+        self.__whCommunication = whCommunication
         self.__mutualMet = mutualMet
         self.__priceOfProductsInBranches = {}
         self.__sumPricesOfBranches = {}

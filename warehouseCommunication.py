@@ -2,12 +2,12 @@ import pypyodbc
 import pandas as pd
 
 class whCommunication:
-    def __init__(self):
+    def __init__(self, serverName, databaseName, userName, password):
         self.__driver = "{SQL Server Native Client 11.0}"
-        self.__server = "DESKTOP-BDO2MF0"
-        self.__database = "pricingProductsDW"
-        self.__userName = "sa"
-        self.__password = "danIN134"
+        self.__server = serverName
+        self.__database = databaseName
+        self.__userName = userName
+        self.__password = password
 
     def __connectWH(self):
         self.connection = pypyodbc.connect(driver=self.__driver, server=self.__server, database=self.__database, uid=self.__userName, pwd=self.__password)
@@ -28,4 +28,12 @@ class whCommunication:
         cursor.close()
         self.__disconnectWH()
         return df
+
+    def CheckIfConnectionValid (self):
+        try:
+            self.connection = pypyodbc.connect(driver=self.__driver, server=self.__server, database=self.__database, uid=self.__userName, pwd=self.__password)
+            return True
+        except pypyodbc.Error:
+            return False
+
 

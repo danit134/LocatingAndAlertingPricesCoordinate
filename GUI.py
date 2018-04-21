@@ -11,6 +11,7 @@ from AppPages.PageOne import *
 from AppPages.PageTwo import *
 from AppPages.PageThree import *
 from AppPages.mutualMethods import *
+from warehouseCommunication import *
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib as mpl
@@ -352,7 +353,7 @@ class TabThree(wx.Panel):
 
 
 class MainFrame(wx.Frame):
-    def __init__(self):
+    def __init__(self, whCommunication):
         style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
         wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
         self.CenterOnScreen()
@@ -360,10 +361,10 @@ class MainFrame(wx.Frame):
         icon.CopyFromBitmap(wx.Bitmap("Icons\\iconSearch.ico", wx.BITMAP_TYPE_ANY))
         self.SetIcon(icon)
 
-        mutualMet = mutualMethods()
-        pageOne = pageOneLogic(mutualMet)
-        pageTwo = pageTwoLogic()
-        pageThree = pageThreeLogic(mutualMet)
+        mutualMet = mutualMethods(whCommunication)
+        pageOne = pageOneLogic(mutualMet, whCommunication)
+        pageTwo = pageTwoLogic(whCommunication)
+        pageThree = pageThreeLogic(mutualMet, whCommunication)
 
         # Create a panel and notebook (tabs holder)
         panel = wx.Panel(self)
@@ -388,9 +389,76 @@ class MainFrame(wx.Frame):
         root = Tkinter.Tk()
         root.withdraw()
 
+class LoginFrame(wx.Frame):
+    def __init__(self):
+        style = wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER
+        wx.Frame.__init__(self, None, title='Login To Warehouse', size=(380, 300), style=style)
+        self.CenterOnScreen()
+        sizer = wx.FlexGridSizer(rows=5, cols=2, hgap=5, vgap=15)
+        root = Tkinter.Tk()
+        root.withdraw()
+        self.panel = wx.Panel(self)
+        self.frame = self
+        icon = wx.Icon()
+        icon.CopyFromBitmap(wx.Bitmap("Icons\\loginIcon.png", wx.BITMAP_TYPE_ANY))
+        self.SetIcon(icon)
+
+        # Servername
+        self.txt_Servername = wx.TextCtrl(self.panel, 1, size=(150, -1))
+        self.txt_Servername.AppendText("DESKTOP-BDO2MF0")
+        lbl_Servername = wx.StaticText(self.panel, -1, "Sever name:")
+
+        sizer.Add(lbl_Servername, 0, wx.LEFT | wx.TOP | wx.RIGHT, 50)
+        sizer.Add(self.txt_Servername, 0, wx.TOP | wx.RIGHT, 50)
+
+        # Databasename
+        self.txt_DBname = wx.TextCtrl(self.panel, 1, size=(150, -1))
+        self.txt_DBname.AppendText("pricingProductsDW")
+        lbl_DBname = wx.StaticText(self.panel, -1, "Database name:")
+
+        sizer.Add(lbl_DBname, 0, wx.LEFT | wx.RIGHT, 50)
+        sizer.Add(self.txt_DBname, 0, wx.RIGHT, 50)
+
+        # Username
+        self.txt_Username = wx.TextCtrl(self.panel, 1, size=(150, -1))
+        self.txt_Username.AppendText("sa")
+        lbl_Username = wx.StaticText(self.panel, -1, "Username:")
+
+        sizer.Add(lbl_Username, 0, wx.LEFT | wx.RIGHT, 50)
+        sizer.Add(self.txt_Username, 0, wx.RIGHT, 50)
+
+        # Password
+        self.txt_Password = wx.TextCtrl(self.panel, 1, size=(150, -1), style=wx.TE_PASSWORD)
+        lbl_Password = wx.StaticText(self.panel, -1, "Password:")
+        sizer.Add(lbl_Password, 0, wx.LEFT | wx.RIGHT, 50)
+        sizer.Add(self.txt_Password, 0, wx.RIGHT, 50)
+
+        # Submit button
+        btn_Process = wx.Button(self.panel, -1, "&Login")
+        self.panel.Bind(wx.EVT_BUTTON, self.OnSubmit, btn_Process)
+        sizer.AddStretchSpacer()
+        sizer.Add(btn_Process, 0, wx.CENTER)
+
+        self.panel.SetSizer(sizer)
+
+
+    def OnSubmit(self, event):
+        ServerText = self.txt_Servername.GetValue().encode('ascii','ignore')
+        DBText = self.txt_DBname.GetValue().encode('ascii','ignore')
+        UserText = self.txt_Username.GetValue().encode('ascii','ignore')
+        PasswordText = self.txt_Password.GetValue().encode('ascii','ignore')
+        self.__whCommunication = whCommunication (ServerText, DBText, UserText, PasswordText)
+        validWarehouse = self.__whCommunication.CheckIfConnectionValid()
+        if (validWarehouse):
+            self.Destroy()
+            MainFrame(self.__whCommunication).Show()
+        else:
+            tkMessageBox.showinfo("Error", "You Insert Incorrect details! Try Again")
+
+
 if __name__ == '__main__':
     #create an application object
     app = wx.App()
-    MainFrame().Show()
+    LoginFrame = LoginFrame().Show()
     #start the event loop
     app.MainLoop()
