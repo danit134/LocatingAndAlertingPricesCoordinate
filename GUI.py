@@ -355,7 +355,7 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, None, title='Locating and Alerting Prices Coordinate', size=(550, 350), style=style)
         self.CenterOnScreen()
         icon = wx.Icon()
-        icon.CopyFromBitmap(wx.Bitmap("Icons\\appIcon.ico", wx.BITMAP_TYPE_ANY))
+        icon.CopyFromBitmap(wx.Bitmap("Icons\\iconSearch.ico", wx.BITMAP_TYPE_ANY))
         self.SetIcon(icon)
 
         mutualMet = mutualMethods()
