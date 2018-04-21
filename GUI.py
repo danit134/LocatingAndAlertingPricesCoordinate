@@ -22,8 +22,10 @@ class TabOne(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.__pageOne = pageOne
         self.__mutualMet = mutualMet
-        self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(240, 5))
+        self.__labelOneName = 'Finding correlation between two branches'
+        self.__labelTwoName = 'Finding correlation in certain areas of the city'
+        self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelOneName, pos=(5, 5))
+        self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelTwoName, pos=(253, 5))
         self.correlateBetweenTwoBranches.SetValue(True)
         self.correlateInCity.SetValue(False)
         self.Bind(wx.EVT_CHECKBOX, self.onChecked)
@@ -166,19 +168,19 @@ class TabOne(wx.Panel):
 
     def onChecked(self, event):
         cb = event.GetEventObject()
-        if (cb.GetLabel() == 'Find correlate in specific city' and cb.GetValue() == True):
+        if (cb.GetLabel() == self.__labelTwoName and cb.GetValue() == True):
             self.DestroyChildren()
             self.drawCorrelateInCity()
-            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
+            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelOneName, pos=(5, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelTwoName, pos=(253, 5))
             self.correlateBetweenTwoBranches.SetValue(False)
             self.correlateInCity.SetValue(True)
             self.Bind(wx.EVT_CHECKBOX, self.onChecked)
         else:
             self.DestroyChildren()
             self.drawCorrelateBetweenTwoBranches()
-            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate between two branches', pos=(5, 5))
-            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label='Find correlate in specific city', pos=(230, 5))
+            self.correlateBetweenTwoBranches = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelOneName, pos=(5, 5))
+            self.correlateInCity = wx.CheckBox(self, id=wx.ID_ANY, label=self.__labelTwoName, pos=(253, 5))
             self.correlateInCity.SetValue(False)
             self.correlateBetweenTwoBranches.SetValue(True)
             self.Bind(wx.EVT_CHECKBOX, self.onChecked)
