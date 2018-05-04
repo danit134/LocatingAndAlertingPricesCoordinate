@@ -413,7 +413,7 @@ class LoginFrame(wx.Frame):
 
         # Databasename
         self.txt_DBname = wx.TextCtrl(self.panel, 1, size=(150, -1))
-        self.txt_DBname.AppendText("pricingProductsDW")
+        self.txt_DBname.AppendText("pricingProducts")
         lbl_DBname = wx.StaticText(self.panel, -1, "Database name:")
 
         sizer.Add(lbl_DBname, 0, wx.LEFT | wx.RIGHT, 50)

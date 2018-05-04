@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from warehouseCommunication import *
 import csv
 import os
 import itertools
 
 
-#page3- the cheapest shopping basket
+#page 3- the cheapest shopping basket
 class pageThreeLogic:
     def __init__(self, mutualMet, whCommunication):
         self.__whCommunication = whCommunication
@@ -21,7 +20,7 @@ class pageThreeLogic:
                 for productName in productsNames:
                     barcode = self.__mutualMet.getBarcode(productName)
                     parameters = [city, chain, branch, date, barcode]
-                    query = "SELECT cost, saleCost, saleDesc FROM PricingProductFacts WHERE cityName=? AND chainName=? AND branchName=? AND dateKey=? AND barcode=?"
+                    query = "SELECT pp.cost, pp.saleCost, pp.saleDesc FROM PricingProductFacts pp INNER JOIN dimBranch b ON pp.branchId = b.branchId LEFT JOIN dimChain ch ON ch.chainId = b.chainId LEFT JOIN dimArea a ON b.areaId = a.areaId LEFT JOIN dimCity c ON c.cityId = a.cityId INNER JOIN dimProduct p ON pp.productId = p.productId WHERE c.cityName=? AND ch.chainName=? AND b.branchName=? AND pp.dateKey=? AND p.barcode=?"
                     df = self.__whCommunication.executeQuery(query, parameters)
                     for index, row in df.iterrows():
                         price = row['cost']
@@ -90,6 +89,10 @@ class pageThreeLogic:
         writer.writerow(['', (str(minSum)).decode('utf-8'), ''])
 
     def findTheCheapestBasket(self, city, areasNames, productsNames, date, pathToResultFile):
+        # if the user want to find another cheap basket its needed to init the dictionaries
+        self.__priceOfProductsInBranches = {}
+        self.__sumPricesOfBranches = {}
+
         date = self.__mutualMet.wxdate2pydate(date)
         for area in areasNames:
             df = self.__mutualMet.getAllBranchesInArea(city, area)

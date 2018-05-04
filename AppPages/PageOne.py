@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import pandas as pd
-import collections
-from scipy.stats import pearsonr
-import numpy as np
 import math
 from AppPages.mutualMethods import *
 import csv
 import os
 import itertools
 
-
+#page 1- discover price coordinate between two branches (between 2 specific branches or between 2 branches in a particular areas)
 class pageOneLogic:
     def __init__(self, mutualMet, whCommunication):
         self.__whCommunication = whCommunication
@@ -44,7 +40,7 @@ class pageOneLogic:
 
     def __CountSamePrice(self, startDate, endDate, chain1, chain2, product, productPrice):
         parameters = [startDate, endDate, chain1, chain2, product, productPrice]
-        query = "SELECT COUNT(DISTINCT chainName) AS count FROM PricingProductFacts WHERE dateKey BETWEEN ? AND ? AND chainName!=? AND chainName!=? AND barcode=? AND cost=?"
+        query = "SELECT COUNT(DISTINCT ch.chainName) AS count FROM PricingProductFacts pp INNER JOIN dimBranch b ON pp.branchId = b.branchId LEFT JOIN dimChain ch ON ch.chainId = b.chainId INNER JOIN dimProduct p ON pp.productId = p.productId WHERE pp.dateKey BETWEEN ? AND ? AND ch.chainName!=? AND ch.chainName!=? AND p.barcode=? AND pp.cost=?"
         df = self.__whCommunication.executeQuery(query, parameters)
         count = df.iloc[0]['count']
         return count
@@ -54,7 +50,7 @@ class pageOneLogic:
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
         startDate = self.__mutualMet.wxdate2pydate(startDate)
         endDate = self.__mutualMet.wxdate2pydate(endDate)
-        # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
+        # function that extract the relevant data to dictionary (key- barcodes, value- arrays of prices per each day)
         branch1_PricesForProducts = self.__buildInputsForPearson(city, chain1, branch1, startDate, endDate)
         branch2_PricesForProducts = self.__buildInputsForPearson(city, chain2, branch2, startDate, endDate)
 
@@ -80,8 +76,7 @@ class pageOneLogic:
                         pearsonResults[barcode] = result
                 except(ZeroDivisionError):
                     continue
-                    # nan values not interesting
-                    # pearsonResults[barcode] = np.nan
+
 
         # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
         if (len(pearsonResults) > 0):
@@ -92,7 +87,7 @@ class pageOneLogic:
 
     def __getProductsPrices(self,city, chain, branch, startDate, endDate):
         parameters = [city, chain, branch, str(startDate), str(endDate)]
-        query = "SELECT barcode, dateKey, cost FROM PricingProductFacts WHERE cityName=? AND chainName=? AND branchName=? AND dateKey BETWEEN ? AND ?"
+        query = "SELECT p.barcode, pp.dateKey, pp.cost FROM PricingProductFacts pp INNER JOIN dimBranch b ON pp.branchId = b.branchId LEFT JOIN dimChain ch ON ch.chainId = b.chainId LEFT JOIN dimArea a ON b.areaId = a.areaId LEFT JOIN dimCity c ON c.cityId = a.cityId INNER JOIN dimProduct p ON pp.productId = p.productId WHERE c.cityName=? AND ch.chainName=? AND b.branchName=? AND pp.dateKey BETWEEN ? AND ?"
         df = self.__whCommunication.executeQuery(query, parameters)
         return df
 
@@ -135,14 +130,13 @@ class pageOneLogic:
         df = df.append(newRowsToAdd, ignore_index=True)
         df = df.sort_values(by=['barcode', 'datekey'], ascending=[0, 1]) #sort the complete df (all the dates and their costs for all products is there)
 
-        # create dictionary from df (key- barcodes, value- arrayes of prices per each day)
+        # create dictionary from df (key- barcodes, value- arrays of prices per each day)
         for barcode in countProducts.keys():
             costsFromDf = df.loc[df['barcode'] == barcode, ['cost']].values
             cost_list = []
             for cost in costsFromDf:
                 cost_list.append(round(float(cost[0]), 2))#convert cost to float
             branch_PricesForProducts[barcode] = cost_list
-        # branch_PricesForProducts = collections.OrderedDict(sorted(branch_PricesForProducts.items()))
         return branch_PricesForProducts
 
     def __average(self, x):

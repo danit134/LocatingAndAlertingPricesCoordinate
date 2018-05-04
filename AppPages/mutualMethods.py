@@ -16,7 +16,7 @@ class mutualMethods:
     def __getAllProductsQuery(self):
         likeParm = u'%[אבגדהוזחטיכלמנסעפצקרשת]%' #define the order of the alpha-beit hebrew so we can sort the products names
         parameters = [likeParm]
-        query = "select barcode, productName from dimProduct order by case when productName like ? then productName end collate Hebrew_CI_AS"
+        query = "SELECT barcode, productName FROM dimProduct ORDER BY CASE WHEN productName LIKE ? then productName END COLLATE Hebrew_CI_AS"
         df = self.__whCommunication.executeQuery(query, parameters)
         allProducts = {}
         for index, row in df.iterrows():
@@ -42,7 +42,7 @@ class mutualMethods:
 
     def __getBranchesAndChainsInCity(self):
         branchesAndChainsInCity = {}
-        query = "select cityName, chainName, branchName from dimBranch"
+        query = "SELECT c.cityName, ch.chainName, b.branchName FROM dimBranch b INNER JOIN dimArea a ON b.areaId = a.areaId LEFT JOIN dimChain ch ON ch.chainId=b.chainId LEFT JOIN dimCity c ON c.cityId = a.cityId"
         df = self.__whCommunication.executeQuery(query, [])
         for index, row in df.iterrows():
             cityName = (row['cityname']).decode('cp1255', 'strict')
@@ -71,7 +71,7 @@ class mutualMethods:
 
     def getAllAreasInCity (self, city):
         parameters = [city]
-        query = "SELECT areaName FROM dimArea WHERE cityName=?"
+        query = "SELECT a.areaName FROM dimArea a INNER JOIN dimCity c ON a.cityId = c.cityId WHERE cityName =?"
         df = self.__whCommunication.executeQuery(query, parameters)
         areaList = []
         for index, row in df.iterrows():
@@ -80,7 +80,7 @@ class mutualMethods:
 
     def getAllBranchesInArea(self,city ,areaName):
         parameters = [city, areaName]
-        query = "SELECT chainName, branchName FROM dimBranch WHERE cityName=? AND areaName=?"
+        query = "SELECT ch.chainName, b.branchName FROM dimBranch b INNER JOIN dimArea a ON b.areaId = a.areaId LEFT JOIN dimChain ch ON ch.chainId=b.chainId LEFT JOIN dimCity c ON c.cityId = a.cityId WHERE cityName = ? AND areaName = ?"
         df = self.__whCommunication.executeQuery(query, parameters)
         return df
 
