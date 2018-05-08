@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import math
-from AppPages.mutualMethods import *
+from ToolPages.mutualMethods import *
 import csv
 import os
 import itertools
+import numpy as np
 
 #page 1- discover price coordinate between two branches (between 2 specific branches or between 2 branches in a particular areas)
 class pageOneLogic:
@@ -45,43 +46,50 @@ class pageOneLogic:
         count = df.iloc[0]['count']
         return count
 
-    # Run pearson algorithm on 2 branches
+    def __crossCorrelationCalc(self, pricesVector_1, pricesVector_2):
+        # normalize the input vectors before using np.correlate so the values will be returned within a range of [-1,1]:
+        normPricesVector_1 = (pricesVector_1 - np.mean(pricesVector_1)) / (np.std(pricesVector_1) * len(pricesVector_1))
+        normPricesVector_2 = (pricesVector_2 - np.mean(pricesVector_2)) / (np.std(pricesVector_2))
+        # calc the lags correlation between two vectors- with cross correlation
+        results = np.correlate(normPricesVector_1, normPricesVector_2, 'full') #the pearson calc result is located at the middle of the results array
+        resultsWithoutEdges = results[1:-1]  # we remove the first and last correlation result becuse we dont wan't the correlation's calc from only 1 day overlap
+        result = max(resultsWithoutEdges)
+        return result
+
+    # Run price coordinate algorithm on 2 branches
     def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
         # convert from class 'wx._core.DateTime' to type 'datetime.date'
         startDate = self.__mutualMet.wxdate2pydate(startDate)
         endDate = self.__mutualMet.wxdate2pydate(endDate)
         # function that extract the relevant data to dictionary (key- barcodes, value- arrays of prices per each day)
-        branch1_PricesForProducts = self.__buildInputsForPearson(city, chain1, branch1, startDate, endDate)
-        branch2_PricesForProducts = self.__buildInputsForPearson(city, chain2, branch2, startDate, endDate)
+        branch1_PricesForProducts = self.__buildInputsForAlgorithm(city, chain1, branch1, startDate, endDate)
+        branch2_PricesForProducts = self.__buildInputsForAlgorithm(city, chain2, branch2, startDate, endDate)
 
-        pearsonResults = {}  # key- product's barcode, value- pearson correlation score between the arrays of the 2 branches
+        correlationscores = {}  # key- product's barcode, value- correlation score between the arrays of the 2 branches
         if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
             # loop on all barcode that are appear in two dictionary
             for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
-                # check if the series contain the same values(two identical series- return sometimes 1 in pearson but its not really price fixing)
-                if (self.__all_same(branch1_PricesForProducts[barcode]) and self.__all_same(branch1_PricesForProducts[barcode])):
-                    if (branch1_PricesForProducts[barcode][0] == branch2_PricesForProducts[barcode][0]):  # if we have two identical series we maybe have price correlation. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
-                        threshold = 0 # number of different branches we allow to have the same price as the 2 branches for current product in this iteration
-                        productPrice = branch1_PricesForProducts[barcode][0]
+                pricesVector_1 = branch1_PricesForProducts[barcode]
+                pricesVector_2 = branch2_PricesForProducts[barcode]
+                # check if the series contain the same values
+                if (self.__all_same(pricesVector_1) and self.__all_same(pricesVector_2)):
+                    if (pricesVector_1[0] == pricesVector_2[0]):  # if we have two identical series we maybe have price coordinate. example-[3.7,3.7,3.7], [3.7,3.7,3.7]
+                        threshold = 0 # number of different branches we allow to have the same price as the 2 branches for current product in this iteration (can be change)
+                        productPrice = pricesVector_1[0]
                         count = self.__CountSamePrice (startDate, endDate, chain1, chain2, barcode, productPrice)
                         if (count <= threshold): #we check if the identical series are really price cooridnate bwtween 2 branches. (or maybe this price is set in amother chains and then its not cooridnate)
-                            pearsonResults[barcode] = 1.0
+                            correlationscores[barcode] = 1.0
                     #cases where we will continue to next product:
                         #we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8].nan values not interesting.
-                        #we have two series different from each other but each series have identical price (return sometimes 1 in pearson but its not really price fixing)
+                        #we have two series different from each other but each series have identical price
                     continue
-                try:
-                    result = self.__pearsonCalc(branch1_PricesForProducts[barcode], branch2_PricesForProducts[barcode])
-                    if (result > 0):  # negative values not interesting
-                        pearsonResults[barcode] = result
-                except(ZeroDivisionError):
-                    continue
-
-
+                result = self.__crossCorrelationCalc (pricesVector_1, pricesVector_2)
+                if (result > 0.5):
+                    correlationscores[barcode] = result
         # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
-        if (len(pearsonResults) > 0):
+        if (len(correlationscores) > 0):
             fileName = city+"_"+chain1+" "+branch1+"_"+chain2+" "+branch2+"_"+str(startDate)+"_"+str(endDate)
-            self.__writeResultsToCSV(pearsonResults, pathToResultFile, fileName)
+            self.__writeResultsToCSV(correlationscores, pathToResultFile, fileName)
             return True
         return False
 
@@ -92,7 +100,7 @@ class pageOneLogic:
         return df
 
     # function that extract the realevent data to dictionery (key- barcodes, value- arrayes of prices per each day)
-    def __buildInputsForPearson (self, city, chain, branch, startDate, endDate):
+    def __buildInputsForAlgorithm (self, city, chain, branch, startDate, endDate):
         df = self.__getProductsPrices(city, chain, branch, startDate, endDate)
         if (df.empty):
             return None
@@ -138,27 +146,6 @@ class pageOneLogic:
                 cost_list.append(round(float(cost[0]), 2))#convert cost to float
             branch_PricesForProducts[barcode] = cost_list
         return branch_PricesForProducts
-
-    def __average(self, x):
-        assert len(x) > 0
-        return float(sum(x)) / len(x)
-
-    def __pearsonCalc(self, x, y):
-        assert len(x) == len(y)
-        n = len(x)
-        assert n > 0
-        avg_x = self.__average(x)
-        avg_y = self.__average(y)
-        diffprod = 0
-        xdiff2 = 0
-        ydiff2 = 0
-        for idx in range(n):
-            xdiff = x[idx] - avg_x
-            ydiff = y[idx] - avg_y
-            diffprod += xdiff * ydiff
-            xdiff2 += xdiff * xdiff
-            ydiff2 += ydiff * ydiff
-        return diffprod / math.sqrt(xdiff2 * ydiff2)
 
     def __all_same(self, items):
         return all(x == items[0] for x in items)

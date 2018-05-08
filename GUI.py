@@ -7,10 +7,10 @@ import tkMessageBox
 
 import wx
 import wx.adv
-from AppPages.PageOne import *
-from AppPages.PageTwo import *
-from AppPages.PageThree import *
-from AppPages.mutualMethods import *
+from ToolPages.PageOne import *
+from ToolPages.PageTwo import *
+from ToolPages.PageThree import *
+from ToolPages.mutualMethods import *
 from warehouseCommunication import *
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
