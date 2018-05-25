@@ -14,7 +14,7 @@ from ToolPages.mutualMethods import *
 from warehouseCommunication import *
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib as mpl
+import matplotlib.pyplot as plt
 import wx.grid
 
 # Define the tab content as classes:
@@ -251,7 +251,7 @@ class TabTwo(wx.Panel):
             graphFrame.SetIcon(icon)
             self.fig = Figure()
             self.axes = self.fig.add_subplot(111)
-            mpl.style.use('default')
+            plt.style.use('default')
             self.axes.set_title(title.format('default'), color='C0')
             self.axes.set(xlabel='Date', ylabel='Price (in Shekels)')
             self.axes.plot(datekey1, cost1, "-o", alpha=0.7, label= text1, color='red')

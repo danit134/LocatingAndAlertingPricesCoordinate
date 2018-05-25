@@ -5,7 +5,9 @@ from ToolPages.mutualMethods import *
 import csv
 import os
 import itertools
+from scipy import stats
 import numpy as np
+np.seterr(divide='ignore', invalid='ignore')
 
 #page 1- discover price coordinate between two branches (between 2 specific branches or between 2 branches in a particular areas)
 class pageOneLogic:
@@ -53,8 +55,15 @@ class pageOneLogic:
         # calc the lags correlation between two vectors- with cross correlation
         results = np.correlate(normPricesVector_1, normPricesVector_2, 'full') #the pearson calc result is located at the middle of the results array
         resultsWithoutEdges = results[1:-1]  # we remove the first and last correlation result becuse we dont wan't the correlation's calc from only 1 day overlap
-        result = max(resultsWithoutEdges)
-        return result
+        return resultsWithoutEdges
+
+    def __calcPvalue (self, correlationResult, degFreedom):
+        if (correlationResult < 1.0):
+            tStat = correlationResult * math.sqrt(degFreedom / (1 - (correlationResult * correlationResult)))
+            pValue = stats.t.sf(tStat, degFreedom)
+        else:
+            pValue = 0
+        return pValue
 
     # Run price coordinate algorithm on 2 branches
     def findPriceCoordinate(self,city, chain1, branch1, chain2, branch2, startDate, endDate, pathToResultFile):
@@ -65,7 +74,7 @@ class pageOneLogic:
         branch1_PricesForProducts = self.__buildInputsForAlgorithm(city, chain1, branch1, startDate, endDate)
         branch2_PricesForProducts = self.__buildInputsForAlgorithm(city, chain2, branch2, startDate, endDate)
 
-        correlationscores = {}  # key- product's barcode, value- correlation score between the arrays of the 2 branches
+        correlationScores = {}  # key- product's barcode, value- correlation score between the arrays of the 2 branches
         if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
             # loop on all barcode that are appear in two dictionary
             for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
@@ -78,18 +87,28 @@ class pageOneLogic:
                         productPrice = pricesVector_1[0]
                         count = self.__CountSamePrice (startDate, endDate, chain1, chain2, barcode, productPrice)
                         if (count <= threshold): #we check if the identical series are really price cooridnate bwtween 2 branches. (or maybe this price is set in amother chains and then its not cooridnate)
-                            correlationscores[barcode] = 1.0
+                            correlationScores[barcode] = [1.0, 0]
                     #cases where we will continue to next product:
                         #we have two identical series but each series have different number- no price correlation. example-[9.9,9.9,9.9], [8.8,8.8,8.8].nan values not interesting.
                         #we have two series different from each other but each series have identical price
                     continue
-                result = self.__crossCorrelationCalc (pricesVector_1, pricesVector_2)
-                if (result > 0.5):
-                    correlationscores[barcode] = result
+                correlationResults = self.__crossCorrelationCalc (pricesVector_1, pricesVector_2)
+                PvalueResults = []
+                n = 2 # n-2 its the degree of freedom. n is the overlap area between the 2 vectors
+                for index in range (0, correlationResults.size):
+                    PvalueResults.append(self.__calcPvalue(correlationResults[index], n-2)) #calc T stat with the cross-correlatio coefficient and n
+                    if (index >= correlationResults.size//2):
+                        n -= 1
+                    else:
+                        n += 1
+                minPvalue = np.nanmin(PvalueResults)
+                if (minPvalue/2 <= 0.1):
+                    minPValueIndex = PvalueResults.index(minPvalue)
+                    correlationScores[barcode] = [correlationResults[minPValueIndex], minPvalue/2]
         # write the results dic to csv file or maybe show the results on the apll and the user can export to file.. choose only the results > 0.6
-        if (len(correlationscores) > 0):
+        if (len(correlationScores) > 0):
             fileName = city+"_"+chain1+" "+branch1+"_"+chain2+" "+branch2+"_"+str(startDate)+"_"+str(endDate)
-            self.__writeResultsToCSV(correlationscores, pathToResultFile, fileName)
+            self.__writeResultsToCSV(correlationScores, pathToResultFile, fileName)
             return True
         return False
 
@@ -154,11 +173,12 @@ class pageOneLogic:
         productNameColumnTemp = [self.__mutualMet.getProductName(barcode) for barcode in results.keys()]
         productNameColumn = [x.encode('cp1255', 'strict') for x in productNameColumnTemp]
         barcodeColumn = results.keys()
-        correlationScoreColumn =  results.values()
+        correlationScoreColumn =  [scoreForProduct[0] for scoreForProduct in results.values()]
+        PvalueColumn = [scoreForProduct[1] for scoreForProduct in results.values()]
         fileName = fileName.replace(u'"', '')
         foupath = os.path.join(pathToResultFile, '%s.csv' % fileName)
         fou = open(foupath, 'wb')
         writer = csv.writer(fou)
-        writer.writerow(["Product Barcode", "Product Name", "Correlation Score"])
-        for val in itertools.izip(barcodeColumn, productNameColumn, correlationScoreColumn):
+        writer.writerow(["Product Barcode", "Product Name", "Correlation Score", "P-value"])
+        for val in itertools.izip(barcodeColumn, productNameColumn, correlationScoreColumn, PvalueColumn):
             writer.writerow(val)
