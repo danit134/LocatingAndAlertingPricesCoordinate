@@ -57,6 +57,18 @@ class pageOneLogic:
         resultsWithoutEdges = results[1:-1]  # we remove the first and last correlation result becuse we dont wan't the correlation's calc from only 1 day overlap
         return resultsWithoutEdges
 
+    def __runTtest(self, correlationResults):
+        PvalueResults = []
+        n = 2  # n-2 its the degree of freedom. n is the overlap area between the 2 vectors
+        for index in range(0, correlationResults.size):
+            PvalueResults.append(self.__calcPvalue(correlationResults[index],
+                                                   n - 2))  # calc T stat with the cross-correlatio coefficient and n
+            if (index >= correlationResults.size // 2):
+                n -= 1
+            else:
+                n += 1
+        return PvalueResults
+
     def __calcPvalue (self, correlationResult, degFreedom):
         if (correlationResult < 1.0):
             tStat = correlationResult * math.sqrt(degFreedom / (1 - (correlationResult * correlationResult)))
@@ -74,7 +86,7 @@ class pageOneLogic:
         branch1_PricesForProducts = self.__buildInputsForAlgorithm(city, chain1, branch1, startDate, endDate)
         branch2_PricesForProducts = self.__buildInputsForAlgorithm(city, chain2, branch2, startDate, endDate)
 
-        correlationScores = {}  # key- product's barcode, value- correlation score between the arrays of the 2 branches
+        correlationScores = {}  # key- product's barcode, value- correlation score between the arrays of the 2 branches and p value of this score
         if ((branch1_PricesForProducts is not None) and (branch2_PricesForProducts is not None)):
             # loop on all barcode that are appear in two dictionary
             for barcode in branch1_PricesForProducts.viewkeys() & branch2_PricesForProducts.viewkeys():
@@ -93,14 +105,7 @@ class pageOneLogic:
                         #we have two series different from each other but each series have identical price
                     continue
                 correlationResults = self.__crossCorrelationCalc (pricesVector_1, pricesVector_2)
-                PvalueResults = []
-                n = 2 # n-2 its the degree of freedom. n is the overlap area between the 2 vectors
-                for index in range (0, correlationResults.size):
-                    PvalueResults.append(self.__calcPvalue(correlationResults[index], n-2)) #calc T stat with the cross-correlatio coefficient and n
-                    if (index >= correlationResults.size//2):
-                        n -= 1
-                    else:
-                        n += 1
+                PvalueResults = self.__runTtest(correlationResults)
                 minPvalue = np.nanmin(PvalueResults)
                 if (minPvalue/2 <= 0.1):
                     minPValueIndex = PvalueResults.index(minPvalue)
